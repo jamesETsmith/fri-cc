@@ -16,15 +16,15 @@ namespace CCSD
                      int nocc, int nvirt)
     {
         // Unpack ERIS
-        Eigen::TensorMap<RowTensor4Xd> oooo(oooo_vec.data(), nocc, nocc, nocc, nocc);
-        Eigen::TensorMap<RowTensor4Xd> ovoo(ovoo_vec.data(), nocc, nvirt, nocc, nocc);
+        Eigen::TensorMap<RowTensor4d> oooo(oooo_vec.data(), nocc, nocc, nocc, nocc);
+        Eigen::TensorMap<RowTensor4d> ovoo(ovoo_vec.data(), nocc, nvirt, nocc, nocc);
 
-        Eigen::TensorMap<RowTensor4Xd> oovv(oovv_vec.data(), nocc, nocc, nvirt, nvirt);
-        Eigen::TensorMap<RowTensor4Xd> ovvo(ovvo_vec.data(), nocc, nvirt, nvirt, nocc);
-        Eigen::TensorMap<RowTensor4Xd> ovov(ovov_vec.data(), nocc, nvirt, nocc, nvirt);
+        Eigen::TensorMap<RowTensor4d> oovv(oovv_vec.data(), nocc, nocc, nvirt, nvirt);
+        Eigen::TensorMap<RowTensor4d> ovvo(ovvo_vec.data(), nocc, nvirt, nvirt, nocc);
+        Eigen::TensorMap<RowTensor4d> ovov(ovov_vec.data(), nocc, nvirt, nocc, nvirt);
 
-        Eigen::TensorMap<RowTensor4Xd> ovvv(ovvv_vec.data(), nocc, nvirt, nvirt, nvirt);
-        Eigen::TensorMap<RowTensor4Xd> vvvv(oooo_vec.data(), nvirt, nvirt, nvirt, nvirt);
+        Eigen::TensorMap<RowTensor4d> ovvv(ovvv_vec.data(), nocc, nvirt, nvirt, nvirt);
+        Eigen::TensorMap<RowTensor4d> vvvv(oooo_vec.data(), nvirt, nvirt, nvirt, nvirt);
     }
 
 } // namespace CCSD

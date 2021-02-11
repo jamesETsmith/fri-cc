@@ -2,11 +2,17 @@
 #define RINTERMEDIATES_HPP
 #include <fricc.hpp>
 
-void make_Foo(Eigen::Ref<RowMatrixXd> t1,
+Eigen::array<Eigen::IndexPair<int>, 1> contraction_dims_1d;
+Eigen::array<Eigen::IndexPair<int>, 2> contraction_dims_2d;
+Eigen::array<Eigen::IndexPair<int>, 3> contraction_dims_3d;
+Eigen::array<int, 2> shuffle_idx_2d;
+Eigen::array<int, 4> shuffle_idx_4d;
+
+void make_Foo(Eigen::Ref<RowMatrixXd> t1_mat,
               Eigen::Ref<Eigen::VectorXd> t2_vec,
-              Eigen::Ref<RowMatrixXd> fock_oo,
+              Eigen::Ref<RowMatrixXd> fock_oo_mat,
               Eigen::Ref<Eigen::VectorXd> ovov_vec,
-              Eigen::Ref<RowMatrixXd> Foo);
+              Eigen::Ref<RowMatrixXd> Foo_mat);
 
 void make_Fvv(Eigen::Ref<RowMatrixXd> t1_mat,
               Eigen::Ref<Eigen::VectorXd> t2_vec,
