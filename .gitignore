@@ -1,0 +1,10 @@
+*.so
+*.a
+__pycache__
+.pytest_cache
+tmp*
+.vscode
+pybind11_sandbox
+external
+pycc
+build
