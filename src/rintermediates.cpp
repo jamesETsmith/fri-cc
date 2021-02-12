@@ -296,3 +296,48 @@ void make_Wvoov(Eigen::Ref<RowMatrixXd> t1_mat,
   Wvoov += ovov.contract(t2, contraction_dims_2d).shuffle(shuffle_idx_4d);
 
 }
+
+void make_Wvovo(Eigen::Ref<RowMatrixXd> t1_mat,
+                Eigen::Ref<Eigen::VectorXd> t2_vec,
+                Eigen::Ref<Eigen::VectorXd> ovoo_vec,
+                Eigen::Ref<Eigen::VectorXd> ovov_vec,
+                Eigen::Ref<Eigen::VectorXd> oovv_vec,
+                Eigen::Ref<Eigen::VectorXd> ovvv_vec,
+                Eigen::Ref<Eigen::VectorXd> Wvovo_vec){
+  const int nocc = t1_mat.rows(), nvirt = t1_mat.cols();
+  Eigen::TensorMap<RowTensor2d> t1(t1_mat.data(), nocc, nvirt);
+  Eigen::TensorMap<RowTensor4d> t2(t2_vec.data(), nocc, nocc, nvirt, nvirt);
+  Eigen::TensorMap<RowTensor4d> ovoo(ovoo_vec.data(), nocc, nvirt, nocc, nocc);
+  Eigen::TensorMap<RowTensor4d> ovov(ovov_vec.data(), nocc, nvirt, nocc, nvirt);
+  Eigen::TensorMap<RowTensor4d> oovv(oovv_vec.data(), nocc, nocc, nvirt, nvirt);
+  Eigen::TensorMap<RowTensor4d> ovvv(ovvv_vec.data(), nocc, nvirt, nvirt, nvirt);
+  Eigen::TensorMap<RowTensor4d> Wvovo(Wvovo_vec.data(), nvirt, nocc, nvirt, nocc);
+  std::cout << "Running Wvovo" << std::endl;
+
+  // Wakci  = lib.einsum('kdac,id->akci', eris_ovvv, t1)
+  contraction_dims_1d = {Eigen::IndexPair<int>(1,1)};
+  shuffle_idx_4d = {1, 0, 2, 3};
+  Wvovo += ovvv.contract(t1, contraction_dims_1d).shuffle(shuffle_idx_4d);
+
+  // Wakci -= lib.einsum('lcki,la->akci', eris_ovoo, t1)
+  contraction_dims_1d = {Eigen::IndexPair<int>(0,0)};
+  shuffle_idx_4d = {3, 1, 0, 2};
+  Wvovo -= ovoo.contract(t1, contraction_dims_1d).shuffle(shuffle_idx_4d);
+
+  // Wakci += np.asarray(eris.oovv).transpose(2,0,3,1)
+  shuffle_idx_4d = {2, 0, 3, 1};
+  Wvovo += oovv.shuffle(shuffle_idx_4d);
+
+  // Wakci -= 0.5*lib.einsum('lckd,ilda->akci', eris_ovov, t2)
+  contraction_dims_2d = {Eigen::IndexPair<int>(0,1), Eigen::IndexPair<int>(3,2)};
+  shuffle_idx_4d = {3, 1, 0, 2};  
+  Wvovo -= 0.5 * ovov.contract(t2, contraction_dims_2d).shuffle(shuffle_idx_4d);
+
+  // Wakci -= lib.einsum('lckd,id,la->akci', eris_ovov, t1, t1)
+  contraction_dims_1d = {Eigen::IndexPair<int>(3,1)};
+  RowTensor4d tmp = ovov.contract(t1, contraction_dims_1d);
+  contraction_dims_1d = {Eigen::IndexPair<int>(0,0)};
+  shuffle_idx_4d = {3, 1, 0, 2};
+  Wvovo -= tmp.contract(t1, contraction_dims_1d).shuffle(shuffle_idx_4d);
+
+}

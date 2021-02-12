@@ -19,4 +19,5 @@ PYBIND11_MODULE(py_ccsd, m)
     m.def("make_Woooo", &make_Woooo, "Nothing");
     m.def("make_Wvvvv", &make_Wvvvv, "Nothing");
     m.def("make_Wvoov", &make_Wvoov, "Nothing");
+    m.def("make_Wvovo", &make_Wvovo, "Nothing");
 }

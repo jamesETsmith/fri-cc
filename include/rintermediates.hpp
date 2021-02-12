@@ -60,4 +60,13 @@ void make_Wvoov(Eigen::Ref<RowMatrixXd> t1_mat,
                 Eigen::Ref<Eigen::VectorXd> ovvo_vec,
                 Eigen::Ref<Eigen::VectorXd> ovvv_vec,
                 Eigen::Ref<Eigen::VectorXd> Wvoov_vec);
+
+void make_Wvovo(Eigen::Ref<RowMatrixXd> t1_mat,
+                Eigen::Ref<Eigen::VectorXd> t2_vec,
+                Eigen::Ref<Eigen::VectorXd> ovoo_vec,
+                Eigen::Ref<Eigen::VectorXd> ovov_vec,
+                Eigen::Ref<Eigen::VectorXd> oovv_vec,
+                Eigen::Ref<Eigen::VectorXd> ovvv_vec,
+                Eigen::Ref<Eigen::VectorXd> Wvovo_vec);
+
 #endif
