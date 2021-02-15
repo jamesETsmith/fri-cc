@@ -6,6 +6,5 @@ __pycache__
 tmp*
 .vscode
 pybind11_sandbox
-external
 pycc
 build

@@ -107,3 +107,28 @@ def update_amps(cc, t1, t2, eris):
     t2new /= eijab
 
     return t1new, t2new
+
+
+npt = np.testing
+ERROR_TOL = 1e-14
+
+
+# Generate CC quantities
+mol = gto.M(atom="H 0 -1 -1; O 0 0 0; H 0 1.2 -1;", basis="ccpvdz")
+mf = scf.RHF(mol).run()
+mycc = cc.CCSD(mf)
+mycc.kernel()
+
+# unpack them
+t1, t2 = (mycc.t1, mycc.t2)
+print(f"t1 shape {t1.shape}")
+eris = mycc.ao2mo()
+nocc, nvirt = t1.shape
+
+
+def test_update_amps():
+    print()
+    print("#" * 80)
+    print("Testing `update_amps()`")
+
+    

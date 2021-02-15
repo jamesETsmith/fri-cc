@@ -13,7 +13,7 @@ endif()
 
 # Set difference between DEBUG and RELEASE
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
 
 #
 # Dependencies
@@ -35,8 +35,8 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/external/pybind11)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 set(FRICC_SOURCES 
-    src/rccsd.cpp
-    src/rintermediates.cpp
+  src/rintermediates.cpp
+  src/rccsd.cpp
 )
 
 # The actual library
