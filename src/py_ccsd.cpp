@@ -3,14 +3,14 @@
 
 // The ordering of the includes is important
 #include <fricc.hpp>
-#include <ccsd.hpp>
+#include <rccsd.hpp>
 #include <rintermediates.hpp>
 
 namespace py = pybind11;
 
 PYBIND11_MODULE(py_ccsd, m)
 {
-    // m.def("update_amps", &CCSD::update_amps, "CCSD.update_amps implemented in C++.");
+    m.def("update_amps", &RCCSD::update_amps, "CCSD.update_amps implemented in C++.");
     m.def("make_Foo", &make_Foo, "Nothing");
     m.def("make_Fvv", &make_Fvv, "Nothing");
     m.def("make_Fov", &make_Fov, "Nothing");

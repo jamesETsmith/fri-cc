@@ -1,6 +1,7 @@
 *.so
 *.a
 __pycache__
+./*/__pycache__
 .pytest_cache
 tmp*
 .vscode

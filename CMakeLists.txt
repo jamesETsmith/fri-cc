@@ -35,7 +35,7 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/external/pybind11)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 set(FRICC_SOURCES 
-    src/ccsd.cpp
+    src/rccsd.cpp
     src/rintermediates.cpp
 )
 

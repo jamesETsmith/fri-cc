@@ -2,7 +2,7 @@
 #define CCSD_HPP
 #include <fricc.hpp>
 
-namespace CCSD
+namespace RCCSD
 {
     void update_amps(Eigen::Ref<RowMatrixXd>,
                      Eigen::Ref<Eigen::VectorXd>,
@@ -15,7 +15,7 @@ namespace CCSD
                      Eigen::Ref<Eigen::VectorXd>,
                      Eigen::Ref<Eigen::VectorXd>,
                      Eigen::Ref<Eigen::VectorXd>,
-                     int, int);
+                     Eigen::Ref<Eigen::VectorXd>);
 }
 
 #endif

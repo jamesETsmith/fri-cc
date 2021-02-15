@@ -8,15 +8,20 @@ from pyscf.cc.rintermediates import (
     Lvv,
     cc_Woooo,
     _get_vvvv,
+    cc_Wvvvv,
+    cc_Wvoov,
 )
+
 from py_ccsd import (
     make_Foo,
     make_Fvv,
     make_Fov,
     make_Loo,
-    # make_Lvv,
-    # make_Woooo,
-    # make_Wvvvv,
+    make_Lvv,
+    make_Woooo,
+    make_Wvvvv,
+    make_Wvoov,
+    make_Wvovo,
 )
 
 # Testing settings
@@ -118,97 +123,146 @@ def test_Loo():
     assert error < ERROR_TOL
 
 
-# def Lvv(t1, t2, eris):
-#     nocc, nvir = t1.shape
-#     fov = eris.fock[:nocc, nocc:]
-#     Lac = cc_Fvv(t1, t2, eris) - np.einsum("kc,ka->ac", fov, t1)
-#     eris_ovvv = np.asarray(eris.get_ovvv())
-#     Lac += 2 * np.einsum("kdac,kd->ac", eris_ovvv, t1)
-#     Lac -= np.einsum("kcad,kd->ac", eris_ovvv, t1)
-#     return Lac
+def test_Lvv():
+    print()
+    print("#" * 80)
+    print("Lvv Test")
+
+    L_vv = Lvv(t1, t2, eris)
+    fock_ov = eris.fock[:nocc, nocc:]
+    ovvv = np.ascontiguousarray(eris.get_ovvv())
+    print(ovvv.shape)
+
+    # C++
+    myFvv = np.zeros((nvirt, nvirt))
+    make_Fvv(
+        t1,
+        t2.ravel(),
+        np.ascontiguousarray(eris.fock[nocc:, nocc:]),
+        eris.ovov.ravel(),
+        myFvv,
+    )
+
+    myLvv = np.zeros_like(L_vv, order="C")
+    make_Lvv(
+        t1,
+        t2.ravel(),
+        np.ascontiguousarray(fock_ov),
+        ovvv.ravel(),
+        myFvv,
+        myLvv,
+    )
+    error = np.linalg.norm(myLvv - L_vv)
+    print(f"Error in Fvv {error:.2e}")
+    assert error < ERROR_TOL
 
 
-# def test_Lvv():
-#     print()
-#     print("#" * 80)
-#     print("Lvv Test")
+def test_Woooo():
+    print()
+    print("#" * 80)
+    print("Woooo Test")
+    pyscf_Woooo = cc_Woooo(t1, t2, eris)
 
-#     L_vv = Lvv(t1, t2, eris)
-#     fock_ov = eris.fock[:nocc, nocc:]
-#     ovvv = np.ascontiguousarray(eris.get_ovvv())
-#     print(ovvv.shape)
+    myWoooo = np.zeros_like(pyscf_Woooo, order="C")
+    make_Woooo(
+        t1,
+        t2.ravel(),
+        eris.oooo.ravel(),
+        eris.ovoo.ravel(),
+        eris.ovov.ravel(),
+        myWoooo.ravel(),
+    )
 
-#     # C++
-#     myFvv = np.zeros((nvirt, nvirt))
-#     make_Fvv(
-#         t1,
-#         t2.ravel(),
-#         np.ascontiguousarray(eris.fock[nocc:, nocc:]),
-#         eris.ovov.ravel(),
-#         myFvv,
-#     )
-
-#     myLvv = np.zeros_like(L_vv, order="C")
-#     make_Lvv(
-#         t1,
-#         t2.ravel(),
-#         np.ascontiguousarray(fock_ov),
-#         ovvv.ravel(),
-#         myFvv,
-#         myLvv,
-#     )
-#     error = np.linalg.norm(myLvv - L_vv)
-#     print(f"Error in Fvv {error:.2e}")
-#     assert error < ERROR_TOL
+    error = np.linalg.norm(myWoooo - pyscf_Woooo)
+    print(f"Error in Wooo {error:.2e}")
+    assert error < ERROR_TOL
 
 
-# def test_Woooo():
-#     print()
-#     print("#" * 80)
-#     print("Woooo Test")
-#     pyscf_Woooo = cc_Woooo(t1, t2, eris)
+def test_Wvvvv():
+    print()
+    print("#" * 80)
+    print("Wvvvv Test")
 
-#     myWoooo = np.zeros_like(pyscf_Woooo, order="C")
-#     make_Woooo(
-#         t1,
-#         t2.ravel(),
-#         eris.oooo.ravel(),
-#         eris.ovoo.ravel(),
-#         eris.ovov.ravel(),
-#         myWoooo.ravel(),
-#     )
+    pyscf_Wvvvv = cc_Wvvvv(t1, t2, eris)
 
-#     error = np.linalg.norm(myWoooo - pyscf_Woooo)
-#     print(f"Error in Wooo {error:.2e}")
-#     assert error < ERROR_TOL
+    ovvv = np.ascontiguousarray(eris.get_ovvv())
+    myWvvvv = np.zeros_like(pyscf_Wvvvv, order="C")
+    make_Wvvvv(
+        t1,
+        t2.ravel(),
+        ovvv.ravel(),
+        _get_vvvv(eris).ravel(),
+        myWvvvv.ravel(),
+    )
 
-
-# def cc_Wvvvv(t1, t2, eris):
-#     # Incore
-#     eris_ovvv = np.asarray(eris.get_ovvv())
-#     Wabcd = lib.einsum("kdac,kb->abcd", eris_ovvv, -t1)
-#     Wabcd -= lib.einsum("kcbd,ka->abcd", eris_ovvv, t1)
-#     Wabcd += np.asarray(_get_vvvv(eris)).transpose(0, 2, 1, 3)
-#     return Wabcd
+    error = np.linalg.norm(myWvvvv - pyscf_Wvvvv)
+    print(f"Error in Wooo {error:.2e}")
+    assert error < ERROR_TOL
 
 
-# def test_Wvvvv():
-#     print()
-#     print("#" * 80)
-#     print("Wvvvv Test")
+def test_Wvoov():
+    print()
+    print("#" * 80)
+    print("Wvoov Test")
 
-#     pyscf_Wvvvv = cc_Wvvvv(t1, t2, eris)
+    pyscf_Wvoov = cc_Wvoov(t1, t2, eris)
 
-#     ovvv = np.ascontiguousarray(eris.get_ovvv())
-#     myWvvvv= np.zeros_like(pyscf_Wvvvv, order="C")
-#     make_Wvvvv(
-#         t1,
-#         t2.ravel(),
-#         ovvv.ravel(),
-#         _get_vvvv(eris).ravel(),
-#         myWvvvv.ravel(),
-#     )
+    ovoo = np.ascontiguousarray(eris.ovoo)
+    ovov = np.ascontiguousarray(eris.ovov)
+    ovvo = np.ascontiguousarray(eris.ovvo)
+    ovvv = np.ascontiguousarray(eris.get_ovvv())
 
-#     error = np.linalg.norm(myWvvvv - pyscf_Wvvvv)
-#     print(f"Error in Wooo {error:.2e}")
-#     assert error < ERROR_TOL
+    myWvoov = np.zeros_like(pyscf_Wvoov, order="C")
+    make_Wvoov(
+        t1,
+        t2.ravel(),
+        ovoo.ravel(),
+        ovov.ravel(),
+        ovvo.ravel(),
+        ovvv.ravel(),
+        myWvoov.ravel(),
+    )
+
+    error = np.linalg.norm(myWvoov - pyscf_Wvoov)
+    print(f"Error in Wooo {error:.2e}")
+    assert error < ERROR_TOL
+
+
+def cc_Wvovo(t1, t2, eris):
+    eris_ovvv = np.asarray(eris.get_ovvv())
+    eris_ovoo = np.asarray(eris.ovoo)
+    Wakci = lib.einsum("kdac,id->akci", eris_ovvv, t1)
+    Wakci -= lib.einsum("lcki,la->akci", eris_ovoo, t1)
+    Wakci += np.asarray(eris.oovv).transpose(2, 0, 3, 1)
+    eris_ovov = np.asarray(eris.ovov)
+    Wakci -= 0.5 * lib.einsum("lckd,ilda->akci", eris_ovov, t2)
+    Wakci -= lib.einsum("lckd,id,la->akci", eris_ovov, t1, t1)
+    return Wakci
+
+
+def test_Wvovo():
+    print()
+    print("#" * 80)
+    print("Wvovo Test")
+
+    pyscf_Wvovo = cc_Wvovo(t1, t2, eris)
+
+    ovoo = np.ascontiguousarray(eris.ovoo)
+    ovov = np.ascontiguousarray(eris.ovov)
+    oovv = np.ascontiguousarray(eris.oovv)
+    ovvv = np.ascontiguousarray(eris.get_ovvv())
+
+    myWvovo = np.zeros_like(pyscf_Wvovo, order="C")
+    make_Wvovo(
+        t1,
+        t2.ravel(),
+        ovoo.ravel(),
+        ovov.ravel(),
+        oovv.ravel(),
+        ovvv.ravel(),
+        myWvovo.ravel(),
+    )
+
+    error = np.linalg.norm(myWvovo - pyscf_Wvovo)
+    print(f"Error in Wooo {error:.2e}")
+    assert error < ERROR_TOL
