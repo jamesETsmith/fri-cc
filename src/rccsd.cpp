@@ -12,6 +12,7 @@ void update_amps(
     Eigen::Ref<Eigen::VectorXd> mo_energies) {
 
   // Helpers
+  Eigen::array<Eigen::IndexPair<int>, 0> contraction_dims_0d = {};
   Eigen::array<Eigen::IndexPair<int>, 1> contraction_dims_1d;
   Eigen::array<Eigen::IndexPair<int>, 2> contraction_dims_2d;
   Eigen::array<Eigen::IndexPair<int>, 3> contraction_dims_3d;
@@ -209,7 +210,129 @@ void update_amps(
   shuffle_idx_4d = {0, 2, 1, 3};
   t2_new += ovov.shuffle(shuffle_idx_4d);
 
-  //
-}
+  // Using the intermediates
+
+  RowTensor2d Loo(nocc, nocc), Lvv(nvirt, nvirt);
+  Loo.setZero(), Lvv.setZero();
+  Eigen::Map<RowMatrixXd> Loo_mat(Loo.data(), nocc, nocc);
+  Eigen::Map<RowMatrixXd> Lvv_mat(Lvv.data(), nvirt, nvirt);
+
+  make_Loo(t1_mat, t2_vec, fock_ov_mat, ovoo_vec, Foo_mat, Loo_mat);
+  make_Lvv(t1_mat, t2_vec, fock_ov_mat, ovvv_vec, Fvv_mat, Lvv_mat);
+
+  RowTensor4d Woooo(nocc, nocc, nocc, nocc), Wvoov(nvirt, nocc, nocc, nvirt);
+  RowTensor4d Wvovo(nvirt, nocc, nvirt, nocc),
+      Wvvvv(nvirt, nvirt, nvirt, nvirt);
+  Woooo.setZero(), Wvoov.setZero(), Wvovo.setZero(), Wvvvv.setZero();
+
+  Eigen::Map<Eigen::VectorXd> Woooo_vec(Woooo.data(),
+                                        nocc * nocc * nocc * nocc);
+  Eigen::Map<Eigen::VectorXd> Wvoov_vec(Wvoov.data(),
+                                        nvirt * nocc * nocc * nvirt);
+  Eigen::Map<Eigen::VectorXd> Wvovo_vec(Wvovo.data(),
+                                        nvirt * nocc * nvirt * nocc);
+  Eigen::Map<Eigen::VectorXd> Wvvvv_vec(Wvvvv.data(),
+                                        nvirt * nvirt * nvirt * nvirt);
+
+  make_Woooo(t1_mat, t2_vec, oooo_vec, ovoo_vec, ovov_vec, Woooo_vec);
+  make_Wvoov(t1_mat, t2_vec, ovoo_vec, ovov_vec, ovvo_vec, ovvv_vec, Wvoov_vec);
+  make_Wvovo(t1_mat, t2_vec, ovoo_vec, ovov_vec, oovv_vec, ovvv_vec, Wvovo_vec);
+  make_Wvvvv(t1_mat, t2_vec, ovvv_vec, vvvv_vec, Wvvvv_vec);
+
+  // tau = t2 + np.einsum("ia,jb->ijab", t1, t1)
+  shuffle_idx_4d = {0, 2, 1, 3};
+  tmp_4d = t2 + t1.contract(t1, contraction_dims_0d).shuffle(shuffle_idx_4d);
+
+  // t2new += lib.einsum("klij,klab->ijab", Woooo, tau)
+  contraction_dims_2d = {Eigen::IndexPair<int>(0, 0),
+                         Eigen::IndexPair<int>(1, 1)};
+  t2_new += Woooo.contract(tmp_4d, contraction_dims_2d);
+
+  // t2new += lib.einsum("abcd,ijcd->ijab", Wvvvv, tau)
+  contraction_dims_2d = {Eigen::IndexPair<int>(2, 2),
+                         Eigen::IndexPair<int>(3, 3)};
+  shuffle_idx_4d = {2, 3, 0, 1};
+  t2_new += Wvvvv.contract(tmp_4d, contraction_dims_2d).shuffle(shuffle_idx_4d);
+
+  // tmp = lib.einsum("ac,ijcb->ijab", Lvv, t2)
+  contraction_dims_1d = {Eigen::IndexPair<int>(1, 2)};
+  shuffle_idx_4d = {1, 2, 0, 3};
+  tmp_4d_2 = Lvv.contract(t2, contraction_dims_1d).shuffle(shuffle_idx_4d);
+
+  // t2new += tmp + tmp.transpose(1, 0, 3, 2)
+  shuffle_idx_4d = {1, 0, 3, 2};
+  t2_new += tmp_4d_2 + tmp_4d_2.shuffle(shuffle_idx_4d);
+
+  // tmp = lib.einsum("ki,kjab->ijab", Loo, t2)
+  contraction_dims_1d = {Eigen::IndexPair<int>(0, 0)};
+  tmp_4d_2 = Loo.contract(t2, contraction_dims_1d);
+
+  // t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+  shuffle_idx_4d = {1, 0, 3, 2};
+  t2_new -= tmp_4d_2 + tmp_4d_2.shuffle(shuffle_idx_4d);
+
+  // tmp = 2 * lib.einsum("akic,kjcb->ijab", Wvoov, t2)
+  contraction_dims_2d = {Eigen::IndexPair<int>(1, 0),
+                         Eigen::IndexPair<int>(3, 2)};
+  shuffle_idx_4d = {1, 2, 0, 3};
+  tmp_4d_2 =
+      2 * Wvoov.contract(t2, contraction_dims_2d).shuffle(shuffle_idx_4d);
+
+  // tmp -= lib.einsum("akci,kjcb->ijab", Wvovo, t2)
+  contraction_dims_2d = {Eigen::IndexPair<int>(1, 0),
+                         Eigen::IndexPair<int>(2, 2)};
+  shuffle_idx_4d = {1, 2, 0, 3};
+  tmp_4d_2 -= Wvovo.contract(t2, contraction_dims_2d).shuffle(shuffle_idx_4d);
+
+  // t2new += tmp + tmp.transpose(1, 0, 3, 2)
+  shuffle_idx_4d = {1, 0, 3, 2};
+  t2_new += tmp_4d_2 + tmp_4d_2.shuffle(shuffle_idx_4d);
+
+  // tmp = lib.einsum("akic,kjbc->ijab", Wvoov, t2)
+  contraction_dims_2d = {Eigen::IndexPair<int>(1, 0),
+                         Eigen::IndexPair<int>(3, 3)};
+  shuffle_idx_4d = {1, 2, 0, 3};
+  tmp_4d_2 = Wvoov.contract(t2, contraction_dims_2d).shuffle(shuffle_idx_4d);
+
+  // t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+  shuffle_idx_4d = {1, 0, 3, 2};
+  t2_new -= tmp_4d_2 + tmp_4d_2.shuffle(shuffle_idx_4d);
+
+  // tmp = lib.einsum("bkci,kjac->ijab", Wvovo, t2)
+  contraction_dims_2d = {Eigen::IndexPair<int>(1, 0),
+                         Eigen::IndexPair<int>(2, 3)};
+  shuffle_idx_4d = {1, 2, 3, 0};
+  tmp_4d_2 = Wvovo.contract(t2, contraction_dims_2d).shuffle(shuffle_idx_4d);
+
+  // t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+  shuffle_idx_4d = {1, 0, 3, 2};
+  t2_new -= tmp_4d_2 + tmp_4d_2.shuffle(shuffle_idx_4d);
+
+  // Divide by the energies
+  RowTensor2d Dia(nocc, nvirt);
+  Dia.setZero();
+#pragma omp parallel for
+  for (int i = 0; i < nocc; i++) {
+    for (int a = 0; a < nvirt; a++) {
+      Dia(i, a) = mo_e_o(i) - mo_e_v(a);
+    }
+  }
+
+  RowTensor4d Dijab(nocc, nocc, nvirt, nvirt);
+  Dijab.setZero();
+#pragma omp parallel for
+  for (int i = 0; i < nocc; i++) {
+    for (int j = 0; j < nocc; j++) {
+      for (int a = 0; a < nvirt; a++) {
+        for (int b = 0; b < nvirt; b++) {
+          Dijab(i, j, a, b) = mo_e_o(i) + mo_e_o(j) - mo_e_v(a) - mo_e_v(b);
+        }
+      }
+    }
+  }
+
+  t1_new /= Dia;
+  t2_new /= Dijab;
+} // end update_amps
 
 } // namespace RCCSD

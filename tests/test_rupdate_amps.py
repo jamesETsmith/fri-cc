@@ -30,9 +30,7 @@ def update_amps(cc, t1, t2, eris):
 
     # Move energy terms to the other side
     Foo[np.diag_indices(nocc)] -= mo_e_o
-    print(Fvv[np.diag_indices(nvir)])
     Fvv[np.diag_indices(nvir)] -= mo_e_v
-    print(Fvv[np.diag_indices(nvir)])
 
     # T1 equation
     t1new = -2 * np.einsum("kc,ka,ic->ia", fov, t1, t1)
@@ -55,9 +53,6 @@ def update_amps(cc, t1, t2, eris):
     t1new += -2 * lib.einsum("lcki,lc,ka->ia", eris_ovoo, t1, t1)
     t1new += lib.einsum("kcli,lc,ka->ia", eris_ovoo, t1, t1)
 
-    # TOOD
-    intermediates["t1_new"] = t1new.copy()
-
     # # T2 equation
     tmp2 = lib.einsum("kibc,ka->abic", eris.oovv, -t1)
     tmp2 += np.asarray(eris_ovvv).conj().transpose(1, 3, 0, 2)
@@ -68,9 +63,6 @@ def update_amps(cc, t1, t2, eris):
     tmp = lib.einsum("akij,kb->ijab", tmp2, t1)
     t2new -= tmp + tmp.transpose(1, 0, 3, 2)
     t2new += np.asarray(eris.ovov).conj().transpose(0, 2, 1, 3)
-
-    intermediates["t2_new"] = t2new.copy()
-    return intermediates
 
     # if cc.cc2:
     #     Woooo2 = np.asarray(eris.oooo).transpose(0, 2, 1, 3).copy()
@@ -91,37 +83,42 @@ def update_amps(cc, t1, t2, eris):
     #     tmp = lib.einsum("ki,kjab->ijab", Loo2, t2)
     #     t2new -= tmp + tmp.transpose(1, 0, 3, 2)
     # else:
-    #     Loo = imd.Loo(t1, t2, eris)
-    #     Lvv = imd.Lvv(t1, t2, eris)
-    #     Loo[np.diag_indices(nocc)] -= mo_e_o
-    #     Lvv[np.diag_indices(nvir)] -= mo_e_v
+    Loo = imd.Loo(t1, t2, eris)
+    Lvv = imd.Lvv(t1, t2, eris)
+    Loo[np.diag_indices(nocc)] -= mo_e_o
+    Lvv[np.diag_indices(nvir)] -= mo_e_v
 
-    #     Woooo = imd.cc_Woooo(t1, t2, eris)
-    #     Wvoov = imd.cc_Wvoov(t1, t2, eris)
-    #     Wvovo = imd.cc_Wvovo(t1, t2, eris)
-    #     Wvvvv = imd.cc_Wvvvv(t1, t2, eris)
+    Woooo = imd.cc_Woooo(t1, t2, eris)
+    Wvoov = imd.cc_Wvoov(t1, t2, eris)
+    Wvovo = imd.cc_Wvovo(t1, t2, eris)
+    Wvvvv = imd.cc_Wvvvv(t1, t2, eris)
 
-    #     tau = t2 + np.einsum("ia,jb->ijab", t1, t1)
-    #     t2new += lib.einsum("klij,klab->ijab", Woooo, tau)
-    #     t2new += lib.einsum("abcd,ijcd->ijab", Wvvvv, tau)
-    #     tmp = lib.einsum("ac,ijcb->ijab", Lvv, t2)
-    #     t2new += tmp + tmp.transpose(1, 0, 3, 2)
-    #     tmp = lib.einsum("ki,kjab->ijab", Loo, t2)
-    #     t2new -= tmp + tmp.transpose(1, 0, 3, 2)
-    #     tmp = 2 * lib.einsum("akic,kjcb->ijab", Wvoov, t2)
-    #     tmp -= lib.einsum("akci,kjcb->ijab", Wvovo, t2)
-    #     t2new += tmp + tmp.transpose(1, 0, 3, 2)
-    #     tmp = lib.einsum("akic,kjbc->ijab", Wvoov, t2)
-    #     t2new -= tmp + tmp.transpose(1, 0, 3, 2)
-    #     tmp = lib.einsum("bkci,kjac->ijab", Wvovo, t2)
-    #     t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+    tau = t2 + np.einsum("ia,jb->ijab", t1, t1)
+    t2new += lib.einsum("klij,klab->ijab", Woooo, tau)
+    t2new += lib.einsum("abcd,ijcd->ijab", Wvvvv, tau)
+    tmp = lib.einsum("ac,ijcb->ijab", Lvv, t2)
+    t2new += tmp + tmp.transpose(1, 0, 3, 2)
+    tmp = lib.einsum("ki,kjab->ijab", Loo, t2)
+    t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+    tmp = 2 * lib.einsum("akic,kjcb->ijab", Wvoov, t2)
+    tmp -= lib.einsum("akci,kjcb->ijab", Wvovo, t2)
+    t2new += tmp + tmp.transpose(1, 0, 3, 2)
+    tmp = lib.einsum("akic,kjbc->ijab", Wvoov, t2)
+    t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+    tmp = lib.einsum("bkci,kjac->ijab", Wvovo, t2)
+    t2new -= tmp + tmp.transpose(1, 0, 3, 2)
 
-    # eia = mo_e_o[:, None] - mo_e_v
-    # eijab = lib.direct_sum("ia,jb->ijab", eia, eia)
-    # t1new /= eia
-    # t2new /= eijab
+    eia = mo_e_o[:, None] - mo_e_v
+    eijab = lib.direct_sum("ia,jb->ijab", eia, eia)
+    t1new /= eia
+    t2new /= eijab
 
-    # return t1new, t2new
+    # TOOD
+    # intermediates["t1_new"] = t1new.copy()
+    # intermediates["t2_new"] = t2new.copy()
+    # return intermediates
+
+    return t1new, t2new
 
 
 npt = np.testing
@@ -169,26 +166,6 @@ def update_amps_wrapper(t1, t2, eris):
     foo = np.ascontiguousarray(fock[:nocc, :nocc])
     fvv = np.ascontiguousarray(fock[nocc:, nocc:])
 
-    args = [
-        t1,
-        t2.ravel(),
-        t1_new,
-        t2_new.ravel(),
-        foo.copy(),
-        fov.copy(),
-        fvv.copy(),
-        np.ascontiguousarray(eris.oooo).ravel(),
-        np.ascontiguousarray(eris.ovoo).ravel(),
-        np.ascontiguousarray(eris.oovv).ravel(),
-        np.ascontiguousarray(eris.ovvo).ravel(),
-        np.ascontiguousarray(eris.ovov).ravel(),
-        np.ascontiguousarray(eris.get_ovvv()).ravel(),
-        imd._get_vvvv(eris).ravel(),
-        np.ascontiguousarray(eris.mo_energy),
-    ]
-    for a in args:
-        print(a.data.contiguous, a.data.c_contiguous)
-    # exit(0)
     my_update_amps(
         t1,
         t2.ravel(),
@@ -215,9 +192,9 @@ def test_update_amps():
     print("#" * 80)
     print("Testing `update_amps()`")
 
-    intermediates = update_amps(mycc, t1, t2, eris)
-    pyscf_t1_new = intermediates["t1_new"]
-    pyscf_t2_new = intermediates["t2_new"]
+    pyscf_t1_new, pyscf_t2_new = update_amps(mycc, t1, t2, eris)
+    # pyscf_t1_new = intermediates["t1_new"]
+    # pyscf_t2_new = intermediates["t2_new"]
 
     my_t1_new, my_t2_new = update_amps_wrapper(t1, t2, eris)
 
