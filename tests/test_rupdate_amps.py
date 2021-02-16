@@ -54,19 +54,24 @@ def update_amps(cc, t1, t2, eris):
     t1new += lib.einsum("kcli,klac->ia", eris_ovoo, t2)
     t1new += -2 * lib.einsum("lcki,lc,ka->ia", eris_ovoo, t1, t1)
     t1new += lib.einsum("kcli,lc,ka->ia", eris_ovoo, t1, t1)
+
+    # TOOD
     intermediates["t1_new"] = t1new.copy()
-    return intermediates
 
     # # T2 equation
-    # tmp2 = lib.einsum("kibc,ka->abic", eris.oovv, -t1)
-    # tmp2 += np.asarray(eris_ovvv).conj().transpose(1, 3, 0, 2)
-    # tmp = lib.einsum("abic,jc->ijab", tmp2, t1)
-    # t2new = tmp + tmp.transpose(1, 0, 3, 2)
-    # tmp2 = lib.einsum("kcai,jc->akij", eris.ovvo, t1)
-    # tmp2 += eris_ovoo.transpose(1, 3, 0, 2).conj()
-    # tmp = lib.einsum("akij,kb->ijab", tmp2, t1)
-    # t2new -= tmp + tmp.transpose(1, 0, 3, 2)
-    # t2new += np.asarray(eris.ovov).conj().transpose(0, 2, 1, 3)
+    tmp2 = lib.einsum("kibc,ka->abic", eris.oovv, -t1)
+    tmp2 += np.asarray(eris_ovvv).conj().transpose(1, 3, 0, 2)
+    tmp = lib.einsum("abic,jc->ijab", tmp2, t1)
+    t2new = tmp + tmp.transpose(1, 0, 3, 2)
+    tmp2 = lib.einsum("kcai,jc->akij", eris.ovvo, t1)
+    tmp2 += eris_ovoo.transpose(1, 3, 0, 2).conj()
+    tmp = lib.einsum("akij,kb->ijab", tmp2, t1)
+    t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+    t2new += np.asarray(eris.ovov).conj().transpose(0, 2, 1, 3)
+
+    intermediates["t2_new"] = t2new.copy()
+    return intermediates
+
     # if cc.cc2:
     #     Woooo2 = np.asarray(eris.oooo).transpose(0, 2, 1, 3).copy()
     #     Woooo2 += lib.einsum("lcki,jc->klij", eris_ovoo, t1)
@@ -212,6 +217,7 @@ def test_update_amps():
 
     intermediates = update_amps(mycc, t1, t2, eris)
     pyscf_t1_new = intermediates["t1_new"]
+    pyscf_t2_new = intermediates["t2_new"]
 
     my_t1_new, my_t2_new = update_amps_wrapper(t1, t2, eris)
 
@@ -221,6 +227,10 @@ def test_update_amps():
     print("Does my t1 have inf?", np.isinf(my_t1_new).any())
     print("Does my t1 have nan?", np.isnan(my_t1_new).any())
 
-    error = np.linalg.norm(pyscf_t1_new - my_t1_new)
-    print(f"Error in t1_new {error:.2e}")
-    assert error < ERROR_TOL
+    t1_error = np.linalg.norm(pyscf_t1_new - my_t1_new)
+    print(f"Error in t1_new {t1_error:.2e}")
+    assert t1_error < ERROR_TOL
+
+    t2_error = np.linalg.norm(pyscf_t2_new - my_t2_new)
+    print(f"Error in t2_new {t2_error:.2e}")
+    assert t2_error < ERROR_TOL
