@@ -1,0 +1,11 @@
+Metadata-Version: 1.2
+Name: fri-cc
+Version: 0.0.1
+Summary: A hybrid C++/Python implementation of FRI-CC
+Home-page: https://github.com/jamesETsmith/fri-cc
+Author: James E. T. Smith
+Author-email: james.smith9113@gmail.com
+License: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
+Requires-Python: >=3.6

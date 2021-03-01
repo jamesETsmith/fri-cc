@@ -8,3 +8,4 @@ tmp*
 pybind11_sandbox
 pycc
 build
+lib

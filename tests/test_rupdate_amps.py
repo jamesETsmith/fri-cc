@@ -3,7 +3,7 @@ from pyscf import gto, scf, cc, lib
 from pyscf.cc import rintermediates as imd
 from pyscf.cc import ccsd
 
-from py_ccsd import update_amps as my_update_amps
+from fricc import update_amps_wrapper
 
 
 def update_amps(cc, t1, t2, eris):
@@ -138,55 +138,6 @@ eris = mycc.ao2mo()
 nocc, nvirt = t1.shape
 
 
-def update_amps_wrapper(t1, t2, eris):
-    """
-    void update_amps(
-    Eigen::Ref<RowMatrixXd> t1_mat,
-    Eigen::Ref<Eigen::VectorXd> t2_vec,
-    Eigen::Ref<RowMatrixXd> t1_mat_new,
-    Eigen::Ref<Eigen::VectorXd> t2_vec_new,
-    Eigen::Ref<RowMatrixXd> fock_oo_mat,
-    Eigen::Ref<RowMatrixXd> fock_ov_mat,
-    Eigen::Ref<RowMatrixXd> fock_vv_mat,
-    Eigen::Ref<Eigen::VectorXd> oooo_vec,
-    Eigen::Ref<Eigen::VectorXd> ovoo_vec,
-    Eigen::Ref<Eigen::VectorXd> oovv_vec,
-    Eigen::Ref<Eigen::VectorXd> ovvo_vec,
-    Eigen::Ref<Eigen::VectorXd> ovov_vec,
-    Eigen::Ref<Eigen::VectorXd> ovvv_vec,
-    Eigen::Ref<Eigen::VectorXd> vvvv_vec,
-    Eigen::Ref<Eigen::VectorXd> mo_energies)
-    """
-
-    t1_new = np.zeros_like(t1, order="C")
-    t2_new = np.zeros_like(t2, order="C")
-
-    fock = eris.fock
-    fov = np.ascontiguousarray(fock[:nocc, nocc:])
-    foo = np.ascontiguousarray(fock[:nocc, :nocc])
-    fvv = np.ascontiguousarray(fock[nocc:, nocc:])
-
-    my_update_amps(
-        t1,
-        t2.ravel(),
-        t1_new,
-        t2_new.ravel(),
-        foo.copy(),
-        fov.copy(),
-        fvv.copy(),
-        np.ascontiguousarray(eris.oooo).ravel(),
-        np.ascontiguousarray(eris.ovoo).ravel(),
-        np.ascontiguousarray(eris.oovv).ravel(),
-        np.ascontiguousarray(eris.ovvo).ravel(),
-        np.ascontiguousarray(eris.ovov).ravel(),
-        np.ascontiguousarray(eris.get_ovvv()).ravel(),
-        imd._get_vvvv(eris).ravel(),
-        np.ascontiguousarray(eris.mo_energy),
-    )
-
-    return t1_new, t2_new
-
-
 def test_update_amps():
     print()
     print("#" * 80)
@@ -197,12 +148,6 @@ def test_update_amps():
     # pyscf_t2_new = intermediates["t2_new"]
 
     my_t1_new, my_t2_new = update_amps_wrapper(t1, t2, eris)
-
-    print("Does pyscf t1 have inf?", np.isinf(pyscf_t1_new).any())
-    print("Does pyscf t1 have nan?", np.isnan(pyscf_t1_new).any())
-
-    print("Does my t1 have inf?", np.isinf(my_t1_new).any())
-    print("Does my t1 have nan?", np.isnan(my_t1_new).any())
 
     t1_error = np.linalg.norm(pyscf_t1_new - my_t1_new)
     print(f"Error in t1_new {t1_error:.2e}")

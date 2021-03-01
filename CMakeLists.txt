@@ -11,9 +11,16 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+
 # Set difference between DEBUG and RELEASE
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
+
+#
+# Some RPATH settings (more later during install)
+#
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 #
 # Dependencies
@@ -46,8 +53,26 @@ add_library(fricc SHARED ${FRICC_SOURCES})
 target_compile_definitions(fricc PUBLIC -DEIGEN_USE_BLAS -DEIGEN_USE_LAPACKE)
 target_link_libraries(fricc PRIVATE BLAS::BLAS LAPACK::LAPACK)
 
+
+# Installation location
+install(
+  TARGETS fricc
+  LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/lib
+)
+
+
 #
 # Pybind11 Wrappers/Module
 #
-pybind11_add_module(py_ccsd ${CMAKE_SOURCE_DIR}/src/py_ccsd.cpp)
-target_link_libraries(py_ccsd PRIVATE fricc)
+
+# Set install RPATH for py_rccsd ONLY
+set(CMAKE_INSTALL_RPATH ${CMAKE_SOURCE_DIR}/lib)
+
+# Build and link Python wrappers
+pybind11_add_module(py_rccsd ${CMAKE_SOURCE_DIR}/src/py_rccsd.cpp)
+target_link_libraries(py_rccsd PRIVATE fricc)
+
+install(
+  TARGETS py_rccsd
+  LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/fricc
+)

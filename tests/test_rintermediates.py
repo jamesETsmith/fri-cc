@@ -12,7 +12,7 @@ from pyscf.cc.rintermediates import (
     cc_Wvoov,
 )
 
-from py_ccsd import (
+from fricc.py_rccsd import (
     make_Foo,
     make_Fvv,
     make_Fov,

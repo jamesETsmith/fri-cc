@@ -8,7 +8,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(py_ccsd, m) {
+PYBIND11_MODULE(py_rccsd, m) {
   m.def("update_amps", &RCCSD::update_amps,
         "CCSD.update_amps implemented in C++.");
   m.def("make_Foo", &make_Foo, "Nothing");
