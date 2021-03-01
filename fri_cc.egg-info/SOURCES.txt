@@ -1,6 +1,0 @@
-README.md
-setup.py
-fri_cc.egg-info/PKG-INFO
-fri_cc.egg-info/SOURCES.txt
-fri_cc.egg-info/dependency_links.txt
-fri_cc.egg-info/top_level.txt
