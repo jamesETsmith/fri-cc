@@ -56,9 +56,13 @@ void update_amps(
   Eigen::Map<RowMatrixXd> Fov_mat(Fov.data(), nocc, nvirt);
   Eigen::Map<RowMatrixXd> Fvv_mat(Fvv.data(), nvirt, nvirt);
 
+  auto f_int_start_time = std::chrono::steady_clock::now();
   make_Foo(t1_mat, t2_vec, fock_oo_mat, ovov_vec, Foo_mat);
   make_Fov(t1_mat, t2_vec, fock_ov_mat, ovov_vec, Fov_mat);
   make_Fvv(t1_mat, t2_vec, fock_vv_mat, ovov_vec, Fvv_mat);
+  auto f_int_end_time = std::chrono::steady_clock::now();
+  std::chrono::duration<double> f_int_elapsed = f_int_end_time - f_int_start_time; // in seconds
+  std::cout << "Time to create F intermediates " << f_int_elapsed.count() << " (s)" << std::endl;
 
   Eigen::VectorXd mo_e_o = mo_energies.head(nocc);
   Eigen::VectorXd mo_e_v = mo_energies.tail(nvirt);
@@ -217,8 +221,12 @@ void update_amps(
   Eigen::Map<RowMatrixXd> Loo_mat(Loo.data(), nocc, nocc);
   Eigen::Map<RowMatrixXd> Lvv_mat(Lvv.data(), nvirt, nvirt);
 
+  auto l_int_start_time = std::chrono::steady_clock::now();
   make_Loo(t1_mat, t2_vec, fock_ov_mat, ovoo_vec, Foo_mat, Loo_mat);
   make_Lvv(t1_mat, t2_vec, fock_ov_mat, ovvv_vec, Fvv_mat, Lvv_mat);
+  auto l_int_end_time = std::chrono::steady_clock::now();
+  std::chrono::duration<double> l_int_elapsed = l_int_end_time - l_int_start_time;
+  std::cout << "Time to create L intermediates " << l_int_elapsed.count() << " (s)" << std::endl;
 
   RowTensor4d Woooo(nocc, nocc, nocc, nocc), Wvoov(nvirt, nocc, nocc, nvirt);
   RowTensor4d Wvovo(nvirt, nocc, nvirt, nocc),
@@ -234,10 +242,14 @@ void update_amps(
   Eigen::Map<Eigen::VectorXd> Wvvvv_vec(Wvvvv.data(),
                                         nvirt * nvirt * nvirt * nvirt);
 
+  auto w_int_start_time = std::chrono::steady_clock::now();
   make_Woooo(t1_mat, t2_vec, oooo_vec, ovoo_vec, ovov_vec, Woooo_vec);
   make_Wvoov(t1_mat, t2_vec, ovoo_vec, ovov_vec, ovvo_vec, ovvv_vec, Wvoov_vec);
   make_Wvovo(t1_mat, t2_vec, ovoo_vec, ovov_vec, oovv_vec, ovvv_vec, Wvovo_vec);
   make_Wvvvv(t1_mat, t2_vec, ovvv_vec, vvvv_vec, Wvvvv_vec);
+  auto w_int_end_time = std::chrono::steady_clock::now();
+  std::chrono::duration<double> w_int_elapsed = w_int_end_time - w_int_start_time;
+  std::cout << "Time to create W intermediates " << w_int_elapsed.count() << " (s)" << std::endl;
 
   // tau = t2 + np.einsum("ia,jb->ijab", t1, t1)
   shuffle_idx_4d = {0, 2, 1, 3};

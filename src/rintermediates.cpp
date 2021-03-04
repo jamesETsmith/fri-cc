@@ -329,7 +329,7 @@ void make_Wvoov(Eigen::Ref<RowMatrixXd> t1_mat,
   TMap4d ovvo(ovvo_vec.data(), nocc, nvirt, nvirt, nocc);
   TMap4d ovvv(ovvv_vec.data(), nocc, nvirt, nvirt, nvirt);
   TMap4d Wvoov(Wvoov_vec.data(), nvirt, nocc, nocc, nvirt);
-  std::cout << "Running Wvoov" << std::endl;
+  std::cout << "Running make_Wvoov" << std::endl;
 
   // Actual calculation
   // Wakic  = lib.einsum('kcad,id->akic', eris_ovvv, t1)
@@ -395,7 +395,7 @@ void make_Wvovo(Eigen::Ref<RowMatrixXd> t1_mat,
   TMap4d oovv(oovv_vec.data(), nocc, nocc, nvirt, nvirt);
   TMap4d ovvv(ovvv_vec.data(), nocc, nvirt, nvirt, nvirt);
   TMap4d Wvovo(Wvovo_vec.data(), nvirt, nocc, nvirt, nocc);
-  std::cout << "Running Wvovo" << std::endl;
+  std::cout << "Running make_Wvovo" << std::endl;
 
   // Wakci  = lib.einsum('kdac,id->akci', eris_ovvv, t1)
   contraction_dims_1d = {Eigen::IndexPair<int>(1, 1)};

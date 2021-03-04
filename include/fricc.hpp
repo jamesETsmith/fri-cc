@@ -3,6 +3,7 @@
 
 // General imports
 #include <iostream>
+#include <chrono>
 
 // Eigen Imports
 #include <Eigen/Dense>
