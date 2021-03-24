@@ -2,7 +2,9 @@
 #include <pybind11/pybind11.h>
 
 // The ordering of the includes is important
-#include <fricc.hpp>
+//
+// #include <fricc.hpp>
+#include <fri_utils.hpp>
 #include <rccsd.hpp>
 #include <rintermediates.hpp>
 
@@ -20,4 +22,6 @@ PYBIND11_MODULE(py_rccsd, m) {
   m.def("make_Wvvvv", &make_Wvvvv, "Nothing");
   m.def("make_Wvoov", &make_Wvoov, "Nothing");
   m.def("make_Wvovo", &make_Wvovo, "Nothing");
+  m.def("get_m_largest", &get_m_largest,
+        "Get the m largest elements of a vector.");
 }

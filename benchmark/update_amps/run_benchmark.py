@@ -35,7 +35,8 @@ mol = gto.M(
   H      1.2641      0.0628     -2.1395
   C      1.3899     -0.0572      0.0114
   H      2.4836     -0.1022      0.0205""",
-    basis="ccpvdz",
+    basis="ccpvtz",
+    max_memory=250000,
 )
 mf = scf.RHF(mol).run()
 mycc = cc.CCSD(mf)
@@ -73,7 +74,7 @@ for nthreads in nthreads_list:
     ti_fricc = time.time()
     update_amps_wrapper(t1, t2, eris)
     tf_fricc = time.time() - ti_fricc
-    print(f"PySCF update_amps time {tf_fricc:.3f} (s)\n")
+    print(f"FRI-CC update_amps time {tf_fricc:.3f} (s)\n")
 
     # Save data
     data["OMP_NUM_THREADS"].append(nthreads)

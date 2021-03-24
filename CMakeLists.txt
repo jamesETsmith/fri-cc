@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 project(fricc LANGUAGES CXX)
 
+
+
 #
 # Compiler standards and options
 #
@@ -56,6 +58,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 set(FRICC_SOURCES 
   src/rintermediates.cpp
   src/rccsd.cpp
+  src/fri_utils.cpp
 )
 
 # The actual library
@@ -69,6 +72,7 @@ target_link_libraries(
   BLAS::BLAS 
   LAPACK::LAPACK 
   OpenMP::OpenMP_CXX
+  tbb
   )
 
 
@@ -77,6 +81,26 @@ install(
   TARGETS fricc
   LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/lib
 )
+
+#
+# C++ Tests
+#
+
+enable_testing()
+
+# list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/external/doctest/scripts/cmake")
+include(${CMAKE_SOURCE_DIR}/external/doctest/scripts/cmake/doctest.cmake)
+# add_subdirectory(${CMAKE_SOURCE_DIR}/external/doctest)
+# find_package(doctest REQUIRED)
+
+# Make test executable
+add_executable(
+  tests 
+  ${CMAKE_SOURCE_DIR}/src_tests/main.cpp
+)
+target_include_directories(tests PUBLIC ${CMAKE_SOURCE_DIR}/external/doctest/doctest)
+target_link_libraries(tests PRIVATE fricc)
+# doctest_discover_tests(tests)
 
 
 #
@@ -88,7 +112,14 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_SOURCE_DIR}/lib)
 
 # Build and link Python wrappers
 pybind11_add_module(py_rccsd ${CMAKE_SOURCE_DIR}/src/py_rccsd.cpp)
-target_link_libraries(py_rccsd PRIVATE fricc)
+target_link_libraries(py_rccsd
+  PRIVATE 
+  fricc 
+  # BLAS::BLAS 
+  # LAPACK::LAPACK 
+  # OpenMP::OpenMP_CXX
+  # tbb
+  )
 
 install(
   TARGETS py_rccsd

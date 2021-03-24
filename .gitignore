@@ -11,3 +11,4 @@ build
 lib
 *.egg-info
 benchmark/update_amps/r0*
+_sinteractive.out

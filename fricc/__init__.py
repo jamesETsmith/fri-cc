@@ -2,6 +2,7 @@ import numpy as np
 
 from pyscf.cc import rintermediates as imd
 from .py_rccsd import update_amps as my_update_amps
+from .py_rccsd import get_m_largest
 
 
 def update_amps_wrapper(t1, t2, eris):
