@@ -8,6 +8,7 @@
 - C++20 Compiler
 - cmake
 - BLAS and LAPACK
+- Intel TBB
 - Eigen (packaged with project)
 - pybind11 (packages with project)
 - Python >= 3.6

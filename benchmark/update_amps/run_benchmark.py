@@ -39,6 +39,17 @@ mol = gto.M(
     max_memory=250000,
 )
 mf = scf.RHF(mol).run()
+nmo = mol.nao_nr()
+nocc = mol.nelectron // 2
+nvirt = nmo - nocc
+t2_size = nocc ** 2 * nvirt ** 2 / (8 * 1e9)
+wvvvv_size = nvirt ** 4 / (8 * 1e9)
+
+print(f"N = {nmo}\tN^6 = {nmo **6:.1e}")
+print(f"Size of t2 amps: {t2_size:.1f} GB")
+print(f"Size of Wvvvv  : {wvvvv_size:.1f} GB")
+exit(0)
+
 mycc = cc.CCSD(mf)
 mycc.max_cycle = 1
 mycc.kernel()
@@ -47,8 +58,6 @@ mycc.kernel()
 t1 = mycc.t1
 t2 = mycc.t2
 eris = mycc.ao2mo()
-nmo = len(mf.mo_energy)
-print(f"N = {nmo}\tN^6 = {nmo **6:.1e}")
 
 #
 # Benchmarking

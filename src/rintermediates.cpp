@@ -5,7 +5,6 @@ void make_Foo(Eigen::Ref<RowMatrixXd> t1_mat,
               Eigen::Ref<RowMatrixXd> fock_oo_mat,
               Eigen::Ref<Eigen::VectorXd> ovov_vec,
               Eigen::Ref<RowMatrixXd> Foo_mat) {
-
   // Helpers
   Eigen::array<Eigen::IndexPair<int>, 1> contraction_dims_1d;
   Eigen::array<Eigen::IndexPair<int>, 2> contraction_dims_2d;
@@ -20,7 +19,9 @@ void make_Foo(Eigen::Ref<RowMatrixXd> t1_mat,
   TMap2d fock_oo(fock_oo_mat.data(), nocc, nocc);
   TMap4d ovov(ovov_vec.data(), nocc, nvirt, nocc, nvirt);
   TMap2d Foo(Foo_mat.data(), nocc, nocc);
-  std::cout << "Running make_Foo" << std::endl;
+
+  // Timing
+  auto start_time = std::chrono::steady_clock::now();
 
   // Actual Calculation
   // Fki  = 2*lib.einsum('kcld,ilcd->ki', eris_ovov, t2)
@@ -51,6 +52,7 @@ void make_Foo(Eigen::Ref<RowMatrixXd> t1_mat,
 
   // Fki += foo
   Foo += fock_oo;
+  log_timing("Generated Foo", start_time);
 }
 
 void make_Fvv(Eigen::Ref<RowMatrixXd> t1_mat,
@@ -71,7 +73,9 @@ void make_Fvv(Eigen::Ref<RowMatrixXd> t1_mat,
   TMap2d fock_vv(fock_vv_mat.data(), nvirt, nvirt);
   TMap4d ovov(ovov_vec.data(), nocc, nvirt, nocc, nvirt);
   TMap2d Fvv(Fvv_mat.data(), nvirt, nvirt);
-  std::cout << "Running make_Fvv" << std::endl;
+
+  // Timing
+  auto start_time = std::chrono::steady_clock::now();
 
   // Actual calculation
   // Fac  =-2*lib.einsum('kcld,klad->ac', eris_ovov, t2)
@@ -102,6 +106,7 @@ void make_Fvv(Eigen::Ref<RowMatrixXd> t1_mat,
 
   // Fac += fvv
   Fvv += fock_vv;
+  log_timing("Generated Fvv", start_time);
 }
 
 void make_Fov(Eigen::Ref<RowMatrixXd> t1_mat,
@@ -123,7 +128,9 @@ void make_Fov(Eigen::Ref<RowMatrixXd> t1_mat,
   TMap2d fock_ov(fock_ov_mat.data(), nocc, nvirt);
   TMap4d ovov(ovov_vec.data(), nocc, nvirt, nocc, nvirt);
   TMap2d Fov(Fov_mat.data(), nocc, nvirt);
-  std::cout << "Running make_Fov" << std::endl;
+
+  // Timing
+  auto start_time = std::chrono::steady_clock::now();
 
   // Actual calculation
   // Fkc  = 2*np.einsum('kcld,ld->kc', eris_ovov, t1)
@@ -138,6 +145,8 @@ void make_Fov(Eigen::Ref<RowMatrixXd> t1_mat,
 
   // Fkc += fov
   Fov += fock_ov;
+
+  log_timing("Generated Fov", start_time);
 }
 
 void make_Loo(Eigen::Ref<RowMatrixXd> t1_mat,
@@ -161,7 +170,9 @@ void make_Loo(Eigen::Ref<RowMatrixXd> t1_mat,
   TMap4d ovoo(ovoo_vec.data(), nocc, nvirt, nocc, nocc);
   TMap2d Foo(Foo_mat.data(), nocc, nocc);
   TMap2d Loo(Loo_mat.data(), nocc, nocc);
-  std::cout << "Running make_Loo" << std::endl;
+
+  // Timing
+  auto start_time = std::chrono::steady_clock::now();
 
   // Actual calculation
   // Lki = cc_Foo(t1, t2, eris) + np.einsum('kc,ic->ki',fov, t1)
@@ -177,6 +188,8 @@ void make_Loo(Eigen::Ref<RowMatrixXd> t1_mat,
   contraction_dims_2d = {Eigen::IndexPair<int>(2, 0),
                          Eigen::IndexPair<int>(1, 1)};
   Loo -= ovoo.contract(t1, contraction_dims_2d);
+
+  log_timing("Generated Loo", start_time);
 }
 
 void make_Lvv(Eigen::Ref<RowMatrixXd> t1_mat,
@@ -200,7 +213,9 @@ void make_Lvv(Eigen::Ref<RowMatrixXd> t1_mat,
   TMap4d ovvv(ovvv_vec.data(), nocc, nvirt, nvirt, nvirt);
   TMap2d Fvv(Fvv_mat.data(), nvirt, nvirt);
   TMap2d Lvv(Lvv_mat.data(), nvirt, nvirt);
-  std::cout << "Running make_Lvv" << std::endl;
+
+  // Timing
+  auto start_time = std::chrono::steady_clock::now();
 
   // Actual Calculation
   // Lac = cc_Fvv(t1, t2, eris) - np.einsum('kc,ka->ac',fov, t1)
@@ -218,6 +233,8 @@ void make_Lvv(Eigen::Ref<RowMatrixXd> t1_mat,
   contraction_dims_2d = {Eigen::IndexPair<int>(0, 0),
                          Eigen::IndexPair<int>(3, 1)};
   Lvv -= ovvv.contract(t1, contraction_dims_2d).shuffle(shuffle_idx_2d);
+
+  log_timing("Generated Lvv", start_time);
 }
 
 void make_Woooo(Eigen::Ref<RowMatrixXd> t1_mat,
@@ -241,7 +258,9 @@ void make_Woooo(Eigen::Ref<RowMatrixXd> t1_mat,
   TMap4d ovoo(ovoo_vec.data(), nocc, nvirt, nocc, nocc);
   TMap4d ovov(ovov_vec.data(), nocc, nvirt, nocc, nvirt);
   TMap4d Woooo(Woooo_vec.data(), nocc, nocc, nocc, nocc);
-  std::cout << "Running make_Woooo" << std::endl;
+
+  // Timing
+  auto start_time = std::chrono::steady_clock::now();
 
   // Actual calculation
   // Wklij  = lib.einsum('lcki,jc->klij', eris_ovoo, t1)
@@ -267,6 +286,8 @@ void make_Woooo(Eigen::Ref<RowMatrixXd> t1_mat,
   // Wklij += np.asarray(eris.oooo).transpose(0,2,1,3)
   shuffle_idx_4d = {0, 2, 1, 3};
   Woooo += oooo.shuffle(shuffle_idx_4d);
+
+  log_timing("Generated Woooo", start_time);
 }
 
 void make_Wvvvv(Eigen::Ref<RowMatrixXd> t1_mat,
@@ -288,7 +309,9 @@ void make_Wvvvv(Eigen::Ref<RowMatrixXd> t1_mat,
   TMap4d ovvv(ovvv_vec.data(), nocc, nvirt, nvirt, nvirt);
   TMap4d vvvv(vvvv_vec.data(), nvirt, nvirt, nvirt, nvirt);
   TMap4d Wvvvv(Wvvvv_vec.data(), nvirt, nvirt, nvirt, nvirt);
-  std::cout << "Running make_Wvvvv" << std::endl;
+
+  // Timing
+  auto start_time = std::chrono::steady_clock::now();
 
   // Actual calculation
   // Wabcd  = lib.einsum('kdac,kb->abcd', eris_ovvv,-t1)
@@ -303,6 +326,8 @@ void make_Wvvvv(Eigen::Ref<RowMatrixXd> t1_mat,
   // Wabcd += np.asarray(_get_vvvv(eris)).transpose(0,2,1,3)
   shuffle_idx_4d = {0, 2, 1, 3};
   Wvvvv += vvvv.shuffle(shuffle_idx_4d);
+
+  log_timing("Generated Wvvvv", start_time);
 }
 
 void make_Wvoov(Eigen::Ref<RowMatrixXd> t1_mat,
@@ -312,7 +337,6 @@ void make_Wvoov(Eigen::Ref<RowMatrixXd> t1_mat,
                 Eigen::Ref<Eigen::VectorXd> ovvo_vec,
                 Eigen::Ref<Eigen::VectorXd> ovvv_vec,
                 Eigen::Ref<Eigen::VectorXd> Wvoov_vec) {
-
   // Helpers
   Eigen::array<Eigen::IndexPair<int>, 1> contraction_dims_1d;
   Eigen::array<Eigen::IndexPair<int>, 2> contraction_dims_2d;
@@ -329,7 +353,9 @@ void make_Wvoov(Eigen::Ref<RowMatrixXd> t1_mat,
   TMap4d ovvo(ovvo_vec.data(), nocc, nvirt, nvirt, nocc);
   TMap4d ovvv(ovvv_vec.data(), nocc, nvirt, nvirt, nvirt);
   TMap4d Wvoov(Wvoov_vec.data(), nvirt, nocc, nocc, nvirt);
-  std::cout << "Running make_Wvoov" << std::endl;
+
+  // Timing
+  auto start_time = std::chrono::steady_clock::now();
 
   // Actual calculation
   // Wakic  = lib.einsum('kcad,id->akic', eris_ovvv, t1)
@@ -370,6 +396,8 @@ void make_Wvoov(Eigen::Ref<RowMatrixXd> t1_mat,
                          Eigen::IndexPair<int>(1, 3)};
   shuffle_idx_4d = {3, 0, 2, 1};
   Wvoov += ovov.contract(t2, contraction_dims_2d).shuffle(shuffle_idx_4d);
+
+  log_timing("Generated Wvoov", start_time);
 }
 
 void make_Wvovo(Eigen::Ref<RowMatrixXd> t1_mat,
@@ -379,7 +407,6 @@ void make_Wvovo(Eigen::Ref<RowMatrixXd> t1_mat,
                 Eigen::Ref<Eigen::VectorXd> oovv_vec,
                 Eigen::Ref<Eigen::VectorXd> ovvv_vec,
                 Eigen::Ref<Eigen::VectorXd> Wvovo_vec) {
-
   // Helpers
   Eigen::array<Eigen::IndexPair<int>, 1> contraction_dims_1d;
   Eigen::array<Eigen::IndexPair<int>, 2> contraction_dims_2d;
@@ -395,7 +422,9 @@ void make_Wvovo(Eigen::Ref<RowMatrixXd> t1_mat,
   TMap4d oovv(oovv_vec.data(), nocc, nocc, nvirt, nvirt);
   TMap4d ovvv(ovvv_vec.data(), nocc, nvirt, nvirt, nvirt);
   TMap4d Wvovo(Wvovo_vec.data(), nvirt, nocc, nvirt, nocc);
-  std::cout << "Running make_Wvovo" << std::endl;
+
+  // Timing
+  auto start_time = std::chrono::steady_clock::now();
 
   // Wakci  = lib.einsum('kdac,id->akci', eris_ovvv, t1)
   contraction_dims_1d = {Eigen::IndexPair<int>(1, 1)};
@@ -423,4 +452,6 @@ void make_Wvovo(Eigen::Ref<RowMatrixXd> t1_mat,
   contraction_dims_1d = {Eigen::IndexPair<int>(0, 0)};
   shuffle_idx_4d = {3, 1, 0, 2};
   Wvovo -= tmp.contract(t1, contraction_dims_1d).shuffle(shuffle_idx_4d);
+
+  log_timing("Generated Wvovo", start_time);
 }

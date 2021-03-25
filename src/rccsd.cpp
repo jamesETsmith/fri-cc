@@ -10,7 +10,6 @@ void update_amps(
     Eigen::Ref<Eigen::VectorXd> ovvo_vec, Eigen::Ref<Eigen::VectorXd> ovov_vec,
     Eigen::Ref<Eigen::VectorXd> ovvv_vec, Eigen::Ref<Eigen::VectorXd> vvvv_vec,
     Eigen::Ref<Eigen::VectorXd> mo_energies) {
-
   // Helpers
   Eigen::array<Eigen::IndexPair<int>, 0> contraction_dims_0d = {};
   Eigen::array<Eigen::IndexPair<int>, 1> contraction_dims_1d;
@@ -60,9 +59,7 @@ void update_amps(
   make_Foo(t1_mat, t2_vec, fock_oo_mat, ovov_vec, Foo_mat);
   make_Fov(t1_mat, t2_vec, fock_ov_mat, ovov_vec, Fov_mat);
   make_Fvv(t1_mat, t2_vec, fock_vv_mat, ovov_vec, Fvv_mat);
-  auto f_int_end_time = std::chrono::steady_clock::now();
-  std::chrono::duration<double> f_int_elapsed = f_int_end_time - f_int_start_time; // in seconds
-  std::cout << "Time to create F intermediates " << f_int_elapsed.count() << " (s)" << std::endl;
+  log_timing("Generated F inter.", f_int_start_time);
 
   Eigen::VectorXd mo_e_o = mo_energies.head(nocc);
   Eigen::VectorXd mo_e_v = mo_energies.tail(nvirt);
@@ -72,6 +69,8 @@ void update_amps(
   //
   // T1 update
   //
+
+  auto t1_time = std::chrono::steady_clock::now();
 
   // -2*np.einsum('kc,ka,ic->ia', fov, t1, t1)
   contraction_dims_1d = {Eigen::IndexPair<int>(0, 0)};
@@ -169,9 +168,45 @@ void update_amps(
   contraction_dims_1d = {Eigen::IndexPair<int>(0, 0)};
   t1_new += tmp_2d.contract(t1, contraction_dims_1d);
 
+  log_timing("T1 update", t1_time);
+
   //
   // T2 update
   //
+
+  // Using the intermediates
+  RowTensor2d Loo(nocc, nocc), Lvv(nvirt, nvirt);
+  Loo.setZero(), Lvv.setZero();
+  Eigen::Map<RowMatrixXd> Loo_mat(Loo.data(), nocc, nocc);
+  Eigen::Map<RowMatrixXd> Lvv_mat(Lvv.data(), nvirt, nvirt);
+
+  auto l_int_start_time = std::chrono::steady_clock::now();
+  make_Loo(t1_mat, t2_vec, fock_ov_mat, ovoo_vec, Foo_mat, Loo_mat);
+  make_Lvv(t1_mat, t2_vec, fock_ov_mat, ovvv_vec, Fvv_mat, Lvv_mat);
+  log_timing("Generated L interm.", l_int_start_time);
+
+  RowTensor4d Woooo(nocc, nocc, nocc, nocc), Wvoov(nvirt, nocc, nocc, nvirt);
+  RowTensor4d Wvovo(nvirt, nocc, nvirt, nocc),
+      Wvvvv(nvirt, nvirt, nvirt, nvirt);
+  Woooo.setZero(), Wvoov.setZero(), Wvovo.setZero(), Wvvvv.setZero();
+
+  // clang-format off
+  Eigen::Map<Eigen::VectorXd> Woooo_vec(Woooo.data(), nocc * nocc * nocc * nocc);
+  Eigen::Map<Eigen::VectorXd> Wvoov_vec(Wvoov.data(), nvirt * nocc * nocc * nvirt);
+  Eigen::Map<Eigen::VectorXd> Wvovo_vec(Wvovo.data(), nvirt * nocc * nvirt * nocc);
+  Eigen::Map<Eigen::VectorXd> Wvvvv_vec(Wvvvv.data(), nvirt * nvirt * nvirt * nvirt);
+  // clang-format on
+
+  auto w_int_start_time = std::chrono::steady_clock::now();
+  make_Woooo(t1_mat, t2_vec, oooo_vec, ovoo_vec, ovov_vec, Woooo_vec);
+  make_Wvoov(t1_mat, t2_vec, ovoo_vec, ovov_vec, ovvo_vec, ovvv_vec, Wvoov_vec);
+  make_Wvovo(t1_mat, t2_vec, ovoo_vec, ovov_vec, oovv_vec, ovvv_vec, Wvovo_vec);
+  make_Wvvvv(t1_mat, t2_vec, ovvv_vec, vvvv_vec, Wvvvv_vec);
+  log_timing("Generated W interm.", w_int_start_time);
+
+  // Contractions to update T2
+
+  auto t2_time = std::chrono::steady_clock::now();
 
   // tmp2  = lib.einsum('kibc,ka->abic', eris.oovv, -t1)
   contraction_dims_1d = {Eigen::IndexPair<int>(0, 0)};
@@ -213,43 +248,6 @@ void update_amps(
   // t2new += np.asarray(eris.ovov).conj().transpose(0,2,1,3)
   shuffle_idx_4d = {0, 2, 1, 3};
   t2_new += ovov.shuffle(shuffle_idx_4d);
-
-  // Using the intermediates
-
-  RowTensor2d Loo(nocc, nocc), Lvv(nvirt, nvirt);
-  Loo.setZero(), Lvv.setZero();
-  Eigen::Map<RowMatrixXd> Loo_mat(Loo.data(), nocc, nocc);
-  Eigen::Map<RowMatrixXd> Lvv_mat(Lvv.data(), nvirt, nvirt);
-
-  auto l_int_start_time = std::chrono::steady_clock::now();
-  make_Loo(t1_mat, t2_vec, fock_ov_mat, ovoo_vec, Foo_mat, Loo_mat);
-  make_Lvv(t1_mat, t2_vec, fock_ov_mat, ovvv_vec, Fvv_mat, Lvv_mat);
-  auto l_int_end_time = std::chrono::steady_clock::now();
-  std::chrono::duration<double> l_int_elapsed = l_int_end_time - l_int_start_time;
-  std::cout << "Time to create L intermediates " << l_int_elapsed.count() << " (s)" << std::endl;
-
-  RowTensor4d Woooo(nocc, nocc, nocc, nocc), Wvoov(nvirt, nocc, nocc, nvirt);
-  RowTensor4d Wvovo(nvirt, nocc, nvirt, nocc),
-      Wvvvv(nvirt, nvirt, nvirt, nvirt);
-  Woooo.setZero(), Wvoov.setZero(), Wvovo.setZero(), Wvvvv.setZero();
-
-  Eigen::Map<Eigen::VectorXd> Woooo_vec(Woooo.data(),
-                                        nocc * nocc * nocc * nocc);
-  Eigen::Map<Eigen::VectorXd> Wvoov_vec(Wvoov.data(),
-                                        nvirt * nocc * nocc * nvirt);
-  Eigen::Map<Eigen::VectorXd> Wvovo_vec(Wvovo.data(),
-                                        nvirt * nocc * nvirt * nocc);
-  Eigen::Map<Eigen::VectorXd> Wvvvv_vec(Wvvvv.data(),
-                                        nvirt * nvirt * nvirt * nvirt);
-
-  auto w_int_start_time = std::chrono::steady_clock::now();
-  make_Woooo(t1_mat, t2_vec, oooo_vec, ovoo_vec, ovov_vec, Woooo_vec);
-  make_Wvoov(t1_mat, t2_vec, ovoo_vec, ovov_vec, ovvo_vec, ovvv_vec, Wvoov_vec);
-  make_Wvovo(t1_mat, t2_vec, ovoo_vec, ovov_vec, oovv_vec, ovvv_vec, Wvovo_vec);
-  make_Wvvvv(t1_mat, t2_vec, ovvv_vec, vvvv_vec, Wvvvv_vec);
-  auto w_int_end_time = std::chrono::steady_clock::now();
-  std::chrono::duration<double> w_int_elapsed = w_int_end_time - w_int_start_time;
-  std::cout << "Time to create W intermediates " << w_int_elapsed.count() << " (s)" << std::endl;
 
   // tau = t2 + np.einsum("ia,jb->ijab", t1, t1)
   shuffle_idx_4d = {0, 2, 1, 3};
@@ -320,6 +318,8 @@ void update_amps(
   shuffle_idx_4d = {1, 0, 3, 2};
   t2_new -= tmp_4d_2 + tmp_4d_2.shuffle(shuffle_idx_4d);
 
+  log_timing("T2 update", t2_time);
+
   // Divide by the energies
   RowTensor2d Dia(nocc, nvirt);
   Dia.setZero();
@@ -345,6 +345,6 @@ void update_amps(
 
   t1_new /= Dia;
   t2_new /= Dijab;
-} // end update_amps
+}  // end update_amps
 
-} // namespace RCCSD
+}  // namespace RCCSD

@@ -26,7 +26,7 @@ execute_process(
 message(STATUS "Using the compiler optimizations for arch=${ARCH}")
 endif()
 
-set(CMAKE_CXX_FLAGS_RELEASE "-g -O3 -march=${ARCH}")
+set(CMAKE_CXX_FLAGS_RELEASE "-g -O3 -march=${ARCH} -ffast-math")
 # message(STATUS "Using the following CXX Flags '${CMAKE_CXX_FLAGS_RELEASE}'")
 
 #
@@ -85,23 +85,18 @@ install(
 #
 # C++ Tests
 #
+if (${CPP_TEST} STREQUAL "ON")
+  message(STATUS "Building C++ tests. After building, run from the command line with:\n\t./tests")
+  enable_testing()
+  include(${CMAKE_SOURCE_DIR}/external/doctest/scripts/cmake/doctest.cmake)
 
-enable_testing()
-
-# list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/external/doctest/scripts/cmake")
-include(${CMAKE_SOURCE_DIR}/external/doctest/scripts/cmake/doctest.cmake)
-# add_subdirectory(${CMAKE_SOURCE_DIR}/external/doctest)
-# find_package(doctest REQUIRED)
-
-# Make test executable
-add_executable(
-  tests 
-  ${CMAKE_SOURCE_DIR}/src_tests/main.cpp
-)
-target_include_directories(tests PUBLIC ${CMAKE_SOURCE_DIR}/external/doctest/doctest)
-target_link_libraries(tests PRIVATE fricc)
-# doctest_discover_tests(tests)
-
+  # Make test executable
+  add_executable(tests ${CMAKE_SOURCE_DIR}/src_tests/main.cpp)
+  target_include_directories(tests PUBLIC ${CMAKE_SOURCE_DIR}/external/doctest/doctest)
+  target_link_libraries(tests PRIVATE fricc)
+else()
+message(STATUS "Skipping build of C++ tests. To set it run:\n\tcmake .. -DCPP_TEST=ON")
+endif()
 
 #
 # Pybind11 Wrappers/Module
@@ -112,14 +107,7 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_SOURCE_DIR}/lib)
 
 # Build and link Python wrappers
 pybind11_add_module(py_rccsd ${CMAKE_SOURCE_DIR}/src/py_rccsd.cpp)
-target_link_libraries(py_rccsd
-  PRIVATE 
-  fricc 
-  # BLAS::BLAS 
-  # LAPACK::LAPACK 
-  # OpenMP::OpenMP_CXX
-  # tbb
-  )
+target_link_libraries(py_rccsd  PRIVATE   fricc   )
 
 install(
   TARGETS py_rccsd
