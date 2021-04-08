@@ -35,6 +35,11 @@ jobs:
       shell: bash
       run: cmake --build . --config $BUILD_TYPE
 
+    - name: Install
+      working-directory: ${{github.workspace}}/build
+      shell: bash
+      run: make install
+
     - name: C++ Tests
       working-directory: ${{github.workspace}}/build
       shell: bash
