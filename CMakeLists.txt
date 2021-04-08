@@ -9,10 +9,8 @@ project(fricc LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ version selection")  # or 11, 14, 17, 20
 set(CMAKE_CXX_STANDARD_REQUIRED ON)  # optional, ensure standard is supported
 
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE RELEASE)
-endif()
-
+set(CMAKE_BUILD_TYPE "RELEASE" CACHE STRING "Build type")
+set(CPP_TEST ON CACHE BOOL "Build C++ Tests")
 
 # Set difference between DEBUG and RELEASE
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
@@ -27,7 +25,6 @@ message(STATUS "Using the compiler optimizations for arch=${ARCH}")
 endif()
 
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3 -march=${ARCH} -ffast-math")
-# message(STATUS "Using the following CXX Flags '${CMAKE_CXX_FLAGS_RELEASE}'")
 
 #
 # Some RPATH settings (more later during install)
@@ -93,7 +90,16 @@ if (${CPP_TEST} STREQUAL "ON")
   # Make test executable
   add_executable(tests ${CMAKE_SOURCE_DIR}/src_tests/main.cpp)
   target_include_directories(tests PUBLIC ${CMAKE_SOURCE_DIR}/external/doctest/doctest)
-  target_link_libraries(tests PRIVATE fricc)
+  target_link_libraries(
+    tests 
+    PRIVATE 
+    fricc
+    BLAS::BLAS 
+    LAPACK::LAPACK 
+    OpenMP::OpenMP_CXX
+    tbb
+  )
+
 else()
 message(STATUS "Skipping build of C++ tests. To set it run:\n\tcmake .. -DCPP_TEST=ON")
 endif()
