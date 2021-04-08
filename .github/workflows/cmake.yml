@@ -35,7 +35,16 @@ jobs:
       shell: bash
       run: cmake --build . --config $BUILD_TYPE
 
-    - name: Test
+    - name: C++ Tests
       working-directory: ${{github.workspace}}/build
       shell: bash
       run: ctest -C $BUILD_TYPE
+
+    - name: Python Install
+      working-directory: ${{github.workspace}}
+      shell: bash
+      run: python3 -m pip install -e .
+
+    - name: Python Tests
+      working-directory: ${{github.workspace}}/py_tests
+      run: pytest -v .

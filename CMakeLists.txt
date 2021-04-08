@@ -9,22 +9,34 @@ project(fricc LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ version selection")  # or 11, 14, 17, 20
 set(CMAKE_CXX_STANDARD_REQUIRED ON)  # optional, ensure standard is supported
 
-set(CMAKE_BUILD_TYPE "RELEASE" CACHE STRING "Build type")
-set(CPP_TEST ON CACHE BOOL "Build C++ Tests")
+# Build type defaults to release
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
 
-# Set difference between DEBUG and RELEASE
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
+# Build CPP tests by default
+if (NOT CPP_TEST)
+  set(CPP_TEST OFF)
+endif()
 
-if (CMAKE_BUILD_TYPE STREQUAL "RELEASE")
-execute_process(
-  COMMAND cat /sys/devices/cpu/caps/pmu_name
-  OUTPUT_VARIABLE ARCH
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-message(STATUS "Using the compiler optimizations for arch=${ARCH}")
+# Special compile flags (i.e. optimizations) for release builds
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+  execute_process(
+    COMMAND cat /sys/devices/cpu/caps/pmu_name
+    OUTPUT_VARIABLE ARCH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if (ARCH STREQUAL "")
+    message(WARNING "Architecture not found, using arch=native.")
+    set(ARCH "native")
+  else()
+    message(STATUS "Using the compiler optimizations for arch=${ARCH}")
+  endif()
 endif()
 
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3 -march=${ARCH} -ffast-math")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+
 
 #
 # Some RPATH settings (more later during install)
@@ -82,26 +94,13 @@ install(
 #
 # C++ Tests
 #
-if (${CPP_TEST} STREQUAL "ON")
-  message(STATUS "Building C++ tests. After building, run from the command line with:\n\t./tests")
+if (${CPP_TEST} STREQUAL ON)
+  message(STATUS "Building C++ tests. After building, run from the command line with:\n\tmake test")
   enable_testing()
-  include(${CMAKE_SOURCE_DIR}/external/doctest/scripts/cmake/doctest.cmake)
-
-  # Make test executable
-  add_executable(tests ${CMAKE_SOURCE_DIR}/src_tests/main.cpp)
-  target_include_directories(tests PUBLIC ${CMAKE_SOURCE_DIR}/external/doctest/doctest)
-  target_link_libraries(
-    tests 
-    PRIVATE 
-    fricc
-    BLAS::BLAS 
-    LAPACK::LAPACK 
-    OpenMP::OpenMP_CXX
-    tbb
-  )
+  add_subdirectory(src_tests)
 
 else()
-message(STATUS "Skipping build of C++ tests. To set it run:\n\tcmake .. -DCPP_TEST=ON")
+  message(STATUS "Skipping build of C++ tests. To set it run:\n\tcmake .. -DCPP_TEST=ON")
 endif()
 
 #
