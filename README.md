@@ -1,4 +1,6 @@
 # Fast-randomized Iteration (FRI) Coupled Cluster
+![example workflow](https://github.com/jamesETsmith/fri-cc/actions/workflows/cmake.yml/badge.svg)
+
 
 :warning: WARNING: PROJECT IS UNDER CONSTRUCTION AND SUBJECT TO BREAKING CHANGES :warning:
 

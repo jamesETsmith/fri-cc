@@ -5,6 +5,10 @@ on: [push]
 env:
   BUILD_TYPE: Release
 
+strategy:
+  matrix:
+    compiler: [gcc, clang]
+
 jobs:
   build:
     # The CMake configure and build commands are platform agnostic and should work equally
@@ -28,6 +32,8 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{github.workspace}}/build
+      env:
+        CC: ${{ matrix.compiler }}
       run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCPP_TEST=ON
 
     - name: Build
