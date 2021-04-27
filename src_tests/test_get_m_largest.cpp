@@ -4,6 +4,7 @@
 //
 
 #include <fri_utils.hpp>
+#include <sparse_tensor.hpp>
 
 TEST_CASE("LOG_TIMING") {
   auto start = std::chrono::steady_clock::now();
@@ -22,6 +23,6 @@ TEST_CASE("M=10 N=100") {
 
   for (size_t i = 0; i < M; i++) {
     CHECK(v[v_largest_idx[i]] == v_sorted[i]);
-    std::cout << v_sorted[i] << std::endl;
+    // std::cout << v_sorted[i] << std::endl;
   }
 }

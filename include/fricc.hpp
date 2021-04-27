@@ -2,6 +2,8 @@
 #define FRICC_HPP
 
 // General imports
+#include <math.h>
+#include <omp.h>
 #include <stdio.h>
 
 #include <chrono>

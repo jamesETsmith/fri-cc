@@ -34,7 +34,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
   endif()
 endif()
 
-set(CMAKE_CXX_FLAGS_RELEASE "-g -O3 -march=${ARCH} -ffast-math")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=${ARCH} -ffast-math -Wno-narrowing")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 
 
@@ -68,6 +68,7 @@ set(FRICC_SOURCES
   src/rintermediates.cpp
   src/rccsd.cpp
   src/fri_utils.cpp
+  src/sparse_tensor.cpp
 )
 
 # The actual library
