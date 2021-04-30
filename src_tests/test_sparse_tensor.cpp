@@ -149,8 +149,10 @@ TEST_CASE("Sparse Tensor Contraction: 0101") {
 
   // Sparse Tensor
   start = std::chrono::steady_clock::now();
-  RowTensor4d my_result = contract_SparseTensor4d(
-      W, T_sparse, contraction_dims_2d, shuffle_idx_4d, "0101");
+  RowTensor4d my_result(result.dimension(0), result.dimension(1),
+                        result.dimension(2), result.dimension(3));
+  my_result.setZero();
+  contract_SparseTensor4d(W, T_sparse, my_result, "0101");
   log_timing("Sparse Tensor Timing", start);
 
   // ERROR CHECKING
@@ -158,9 +160,13 @@ TEST_CASE("Sparse Tensor Contraction: 0101") {
 }
 
 TEST_CASE("Sparse Tensor Contraction: 2323") {
-  const size_t no = 10;
-  const size_t nv = 100;
+  const size_t no = 25;
+  const size_t nv = 50;
+  const double th = 0.9;
+
   const std::array<size_t, 4> dims{no, no, nv, nv};
+  std::cout << "t2 size " << 8. * no * no * nv * nv / 1e9 << " (GB)"
+            << std::endl;
 
   // Set up random tensor
   RowTensor4d W(nv, nv, nv, nv);
@@ -171,19 +177,35 @@ TEST_CASE("Sparse Tensor Contraction: 2323") {
 
   // Zero out half the values of the tensor and put those non-zero values in the
   // sparse tensor
-  const size_t nnz = T.size() * 0.1;
-  SparseTensor4d T_sparse(dims, nnz);
+  size_t nnz = 0;
   size_t idx = 0;
+#pragma omp parallel for reduction(+ : nnz)
   for (size_t i = 0; i < T.dimension(0); i++) {
     for (size_t j = 0; j < T.dimension(1); j++) {
       for (size_t a = 0; a < T.dimension(2); a++) {
         for (size_t b = 0; b < T.dimension(3); b++) {
-          if (idx < nnz) {
-            T_sparse.set_element(idx, idx, T(i, j, a, b));
-          } else {
+          if (abs(T(i, j, a, b)) < th) {
             T(i, j, a, b) = 0.0;
+          } else {
+            nnz++;
           }
-          idx += 1;
+        }
+      }
+    }
+  }
+
+  std::cout << "Relative nnz fraction " << double(nnz) / T.size() << std::endl;
+
+  SparseTensor4d T_sparse(dims, nnz);
+  for (size_t i = 0; i < T.dimension(0); i++) {
+    for (size_t j = 0; j < T.dimension(1); j++) {
+      for (size_t a = 0; a < T.dimension(2); a++) {
+        for (size_t b = 0; b < T.dimension(3); b++) {
+          if (T(i, j, a, b) != 0.0) {
+            T(i, j, a, b) = 0.0;
+            T_sparse.set_element(idx, idx, T(i, j, a, b));
+            idx++;
+          }
         }
       }
     }
@@ -191,7 +213,7 @@ TEST_CASE("Sparse Tensor Contraction: 2323") {
 
   // Contraction Helpers
   const Eigen::array<Eigen::IndexPair<int>, 2> contraction_dims_2d{
-      Eigen::IndexPair<int>(2, 2), Eigen::IndexPair<int>(3, 3)};
+      Eigen::IndexPair<int>(3, 3), Eigen::IndexPair<int>(2, 2)};
   const Eigen::array<int, 4> shuffle_idx_4d{2, 3, 0, 1};
 
   // Eigen Contraction
@@ -202,8 +224,11 @@ TEST_CASE("Sparse Tensor Contraction: 2323") {
 
   // Sparse Tensor
   start = std::chrono::steady_clock::now();
-  RowTensor4d my_result = contract_SparseTensor4d(
-      W, T_sparse, contraction_dims_2d, shuffle_idx_4d, "2323");
+  std::cout << "Starting sparse tensor contraction" << std::endl;
+  RowTensor4d my_result(result.dimension(0), result.dimension(1),
+                        result.dimension(2), result.dimension(3));
+  my_result.setZero();
+  contract_SparseTensor4d(W, T_sparse, my_result, "2323");
   log_timing("Sparse Tensor Timing", start);
 
   // ERROR CHECKING

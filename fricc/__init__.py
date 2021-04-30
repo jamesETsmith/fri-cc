@@ -4,6 +4,10 @@ from pyscf.cc import rintermediates as imd
 from .py_rccsd import update_amps as my_update_amps
 from .py_rccsd import get_m_largest
 
+# from .py_rccsd import init_sparse_tensor
+from .py_rccsd import SparseTensor4d
+from .py_rccsd import contract_DTSpT
+
 
 def update_amps_wrapper(t1, t2, eris):
     nocc, nvirt = t1.shape

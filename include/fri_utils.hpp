@@ -6,10 +6,12 @@
 
 using VecXST = Eigen::Matrix<size_t, Eigen::Dynamic, 1>;
 
+// Sorting utilities
 void argsort(Eigen::Ref<Eigen::VectorXd> array, Eigen::Ref<VecXST> sorted_idx);
 void get_m_largest(Eigen::Ref<Eigen::VectorXd> v, const size_t m,
                    Eigen::Ref<VecXST> v_largest_idx);
 
+// Tensor utilities
 template <int p>
 double p_norm(RowTensor4d& error) {
   double norm;

@@ -1,13 +1,18 @@
+#ifndef SPARSE_TENSOR_HPP
+#define SPARSE_TENSOR_HPP
+// clang-format off
 #include <array>
 #include <fricc.hpp>
-#include <string>
+#include <fri_utils.hpp>
+// clang-format on
 
 class SparseTensor4d {
   //
-  size_t nnz;
+  const size_t nnz;
   const std::array<size_t, 4> dims;
   std::vector<std::array<size_t, 4>> indices;
   std::vector<double> data;
+  std::shared_ptr<SparseTensor4d> this_shared_ptr;
 
   //
   size_t flat_idx(const int i, const int j, const int a, const int b);
@@ -20,10 +25,28 @@ class SparseTensor4d {
     indices.resize(nnz);
     data.resize(nnz);
   }
+  SparseTensor4d(Eigen::Ref<Eigen::VectorXd> tensor_flat,
+                 std::array<size_t, 4> dims, const size_t m)
+      : dims(dims), nnz(m) {
+    indices.resize(m);
+    data.resize(m);
+
+    // Sort dense tensor
+    VecXST t_largest_idx(m);
+    get_m_largest(tensor_flat, m, t_largest_idx);
+
+// Put them into sparse tensor (in parallel)
+#pragma omp parallel for schedule(static)
+    for (size_t i = 0; i < m; i++) {
+      const size_t idx = t_largest_idx[i];
+      this->set_element(i, idx, tensor_flat(idx));
+    }
+  }
 
   // Getters/Setters
   void set_element(const size_t mi, const size_t idx, const double value);
   void get_element(const size_t mi, std::array<size_t, 4>& idx, double& value);
+  const size_t dimension(const int i) { return dims[i]; }
   std::array<size_t, 4> dimensions() { return dims; }
   const size_t size() { return nnz; }
 
@@ -40,9 +63,19 @@ class SparseTensor4d {
     }
     return os;
   }
+  void print() { std::cout << *this << std::endl; }
 };
 
-RowTensor4d contract_SparseTensor4d(
-    RowTensor4d& W, SparseTensor4d& T,
-    const Eigen::array<Eigen::IndexPair<int>, 2>& contraction_dims_2d,
-    const Eigen::array<int, 4>& shuffle_idx_4d, const std::string term);
+void contract_SparseTensor4d(RowTensor4d& W, SparseTensor4d& T,
+                             RowTensor4d& output, const std::string term);
+
+void contract_SparseTensor4d_2323(RowTensor4d& W, SparseTensor4d& T,
+                                  RowTensor4d& output);
+void contract_SparseTensor4d_2323_wrapper(TMap4d& W, SparseTensor4d& T,
+                                          TMap4d& output);
+
+void contract_SparseTensor4d_wrapper(Eigen::Ref<Eigen::VectorXd>& W_vec,
+                                     SparseTensor4d& T,
+                                     Eigen::Ref<Eigen::VectorXd>& output_vec,
+                                     const std::string term);
+#endif
