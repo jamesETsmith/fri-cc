@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [gcc-9, gcc-10, clang-10, clang-11]
+        compiler: [g++-9, g++-10, clang++-10, clang++-11]
        
     steps:
     - name: Checkout repository
