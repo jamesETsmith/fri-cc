@@ -14,7 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        compiler: [gcc, clang]
+        compiler: [gcc-9, gcc-10, clang-10, clang-11]
+      env:
+        CXX: ${{ matrix.compiler }}
         
     steps:
     - name: Checkout repository
