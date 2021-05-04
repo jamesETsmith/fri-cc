@@ -22,7 +22,7 @@ foreach(TEST_SRC ${TEST_FILES})
     BLAS::BLAS 
     LAPACK::LAPACK 
     OpenMP::OpenMP_CXX
-    TBB:tbb
+    TBB::tbb
   )
   add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
 
