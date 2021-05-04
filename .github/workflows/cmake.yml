@@ -16,9 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [gcc-9, gcc-10, clang-10, clang-11]
-      env:
-        CXX: ${{ matrix.compiler }}
-        
+       
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -35,7 +33,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}/build
       env:
-        CC: ${{ matrix.compiler }}
+        CXX: ${{ matrix.compiler }}
       run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCPP_TEST=ON
 
     - name: Build
