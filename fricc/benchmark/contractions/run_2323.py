@@ -2,7 +2,7 @@ import time
 import numpy as np
 from fricc import SparseTensor4d, contract_DTSpT
 
-no = 50
+no = 100
 nv = 200
 frac = 0.0001
 

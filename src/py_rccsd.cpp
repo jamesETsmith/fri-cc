@@ -29,6 +29,7 @@ PYBIND11_MODULE(py_rccsd, m) {
   //
   m.def("get_m_largest", &get_m_largest,
         "Get the m largest elements of a vector.");
+  m.def("parallel_sort", &my_parallel_sort, "");
 
   py::class_<SparseTensor4d>(m, "SparseTensor4d")
       .def(py::init<std::array<size_t, 4>, double>())

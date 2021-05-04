@@ -1,4 +1,8 @@
+#include <algorithm>
+#include <execution>
 #include <fri_utils.hpp>
+
+#include "tbb/parallel_sort.h"
 
 /**
  * @brief Mimics numpy.argsort and populates a vector of the indices that sort
@@ -18,17 +22,21 @@ void argsort(Eigen::Ref<Eigen::VectorXd> array, Eigen::Ref<VecXST> sorted_idx) {
             });
 }
 
-/**
- * @brief Get the indices of the m largest largest elements in v.
- *
- * @param v Vector that we want to know the largest elements of.
- * @param m The number of largest elements we want.
- * @param v_largest_idx The indices for the m largest elements in v.
- */
+// /**
+//  * @brief Get the indices of the m largest largest elements in v.
+//  *
+//  * @param v Vector that we want to know the largest elements of.
+//  * @param m The number of largest elements we want.
+//  * @param v_largest_idx The indices for the m largest elements in v.
+//  */
 void get_m_largest(Eigen::Ref<Eigen::VectorXd> v, const size_t m,
                    Eigen::Ref<VecXST> v_largest_idx) {
   VecXST sorted_idx(v.size());
   argsort(v, sorted_idx);
   std::copy(std::execution::par_unseq, sorted_idx.data(), sorted_idx.data() + m,
             v_largest_idx.data());
+}
+
+void my_parallel_sort(Eigen::Ref<Eigen::VectorXd>& v) {
+  std::sort(std::execution::par_unseq, v.begin(), v.end());
 }

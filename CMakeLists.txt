@@ -6,8 +6,8 @@ project(fricc LANGUAGES CXX)
 #
 # Compiler standards and options
 #
-set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ version selection")  # or 11, 14, 17, 20
-set(CMAKE_CXX_STANDARD_REQUIRED ON)  # optional, ensure standard is supported
+set(CMAKE_CXX_STANDARD 17) 
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Build type defaults to release
 if (NOT CMAKE_BUILD_TYPE)
@@ -52,6 +52,8 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 find_package(OpenMP REQUIRED)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
+find_package(TBB REQUIRED)
+message(STATUS "Intel TBB Found? ${TBB_tbb_FOUND}")
 
 # Eigen
 include_directories(${CMAKE_SOURCE_DIR}/external/eigen)
@@ -65,32 +67,23 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/external/pybind11)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 set(FRICC_SOURCES 
+  src/fri_utils.cpp
   src/rintermediates.cpp
   src/rccsd.cpp
-  src/fri_utils.cpp
   src/sparse_tensor.cpp
 )
 
 # The actual library
 add_library(fricc SHARED ${FRICC_SOURCES})
 
+
 # Use BLAS/LAPACKE as Eigen backend
-target_compile_definitions(fricc PUBLIC -DEIGEN_USE_BLAS -DEIGEN_USE_LAPACKE)
-target_link_libraries(
-  fricc 
-  PRIVATE 
-  BLAS::BLAS 
-  LAPACK::LAPACK 
-  OpenMP::OpenMP_CXX
-  tbb
-  )
+target_compile_definitions(fricc PRIVATE -DEIGEN_USE_BLAS -DEIGEN_USE_LAPACKE)
+target_link_libraries(fricc PRIVATE BLAS::BLAS LAPACK::LAPACK OpenMP::OpenMP_CXX TBB::tbb)
 
 
 # Installation location
-install(
-  TARGETS fricc
-  LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/lib
-)
+install(TARGETS fricc LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/lib)
 
 #
 # C++ Tests
@@ -113,9 +106,6 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_SOURCE_DIR}/lib)
 
 # Build and link Python wrappers
 pybind11_add_module(py_rccsd ${CMAKE_SOURCE_DIR}/src/py_rccsd.cpp)
-target_link_libraries(py_rccsd  PRIVATE   fricc   )
+target_link_libraries(py_rccsd  PRIVATE   fricc)
 
-install(
-  TARGETS py_rccsd
-  LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/fricc
-)
+install(TARGETS py_rccsd LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/fricc)

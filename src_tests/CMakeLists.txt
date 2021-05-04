@@ -11,7 +11,11 @@ foreach(TEST_SRC ${TEST_FILES})
   MESSAGE(STATUS "MAKING TEST ${TEST_NAME}")
 
   add_executable(${TEST_NAME} ${TEST_SRC})
-  target_include_directories(${TEST_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/external/doctest/doctest)
+  target_include_directories(
+    ${TEST_NAME} PUBLIC 
+    ${CMAKE_SOURCE_DIR}/external/doctest/doctest
+    # ${TBB_INCLUDE_DIRS}
+    )
   target_link_libraries(
     ${TEST_NAME}
     PRIVATE 
@@ -19,7 +23,7 @@ foreach(TEST_SRC ${TEST_FILES})
     BLAS::BLAS 
     LAPACK::LAPACK 
     OpenMP::OpenMP_CXX
-    tbb
+    /mnt/home/jsmith/apps/spack/var/spack/environments/rusty-broadwell/.spack-env/view/lib/libtbb.so
   )
   add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
 

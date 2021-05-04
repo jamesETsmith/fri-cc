@@ -1,10 +1,27 @@
 #ifndef SPARSE_TENSOR_HPP
 #define SPARSE_TENSOR_HPP
-// clang-format off
 #include <array>
-#include <fricc.hpp>
 #include <fri_utils.hpp>
-// clang-format on
+#include <fricc.hpp>
+
+using VecXST = Eigen::Matrix<size_t, Eigen::Dynamic, 1>;
+
+// Tensor utilities
+template <int p>
+double p_norm(RowTensor4d& error) {
+  double norm;
+#pragma omp parallel reduction(+ : norm)
+  for (size_t i = 0; i < error.dimension(0); i++) {
+    for (size_t j = 0; j < error.dimension(1); j++) {
+      for (size_t a = 0; a < error.dimension(2); a++) {
+        for (size_t b = 0; b < error.dimension(3); b++) {
+          norm += pow(abs(error(i, j, a, b)), p);
+        }
+      }
+    }
+  }
+  return pow(norm, 1. / p);
+}
 
 class SparseTensor4d {
   //

@@ -3,8 +3,8 @@
 
 // General imports
 #include <math.h>
-#include <omp.h>
-#include <stdio.h>
+// #include <omp.h>
+// #include <stdio.h>
 
 #include <chrono>
 #include <iostream>
@@ -15,6 +15,7 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 
 // Type short-hands
+using VecXST = Eigen::Matrix<size_t, Eigen::Dynamic, 1>;
 using RowMatrixXd =
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 using RowTensor2d = Eigen::Tensor<double, 2, Eigen::RowMajor>;
