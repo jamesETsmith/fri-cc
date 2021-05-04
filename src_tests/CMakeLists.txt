@@ -14,7 +14,6 @@ foreach(TEST_SRC ${TEST_FILES})
   target_include_directories(
     ${TEST_NAME} PUBLIC 
     ${CMAKE_SOURCE_DIR}/external/doctest/doctest
-    # ${TBB_INCLUDE_DIRS}
     )
   target_link_libraries(
     ${TEST_NAME}
@@ -23,7 +22,7 @@ foreach(TEST_SRC ${TEST_FILES})
     BLAS::BLAS 
     LAPACK::LAPACK 
     OpenMP::OpenMP_CXX
-    /mnt/home/jsmith/apps/spack/var/spack/environments/rusty-broadwell/.spack-env/view/lib/libtbb.so
+    TBB:tbb
   )
   add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
 
