@@ -11,14 +11,22 @@
  * @param array The vector we want to sort.
  * @param sorted_idx The vector of indices that sorts array.
  */
-void argsort(Eigen::Ref<Eigen::VectorXd> array, Eigen::Ref<VecXST> sorted_idx) {
-  std::iota(sorted_idx.data(), sorted_idx.data() + sorted_idx.size(), 0);
+void argsort(const Eigen::Ref<Eigen::VectorXd>& array,
+             Eigen::Ref<VecXST> sorted_idx) {
+  // std::iota(sorted_idx.data(), sorted_idx.data() + sorted_idx.size(), 0);
+  auto t_iota = std::chrono::steady_clock::now();
+#pragma omp parallel for simd
+  for (size_t i = 0; i < sorted_idx.size(); i++) {
+    sorted_idx[i] = i;
+  }
+  log_timing("IOTA Time", t_iota);
+
   std::sort(std::execution::par_unseq, sorted_idx.data(),
             sorted_idx.data() + sorted_idx.size(),
-            [&array](int left, int right) -> bool {
+            [&array](const size_t& left, const size_t& right) -> bool {
               // sort indices according to corresponding array element in
               // DESCENDING ORDER
-              return array[left] > array[right];
+              return abs(array[left]) > abs(array[right]);
             });
 }
 
@@ -29,12 +37,20 @@ void argsort(Eigen::Ref<Eigen::VectorXd> array, Eigen::Ref<VecXST> sorted_idx) {
 //  * @param m The number of largest elements we want.
 //  * @param v_largest_idx The indices for the m largest elements in v.
 //  */
-void get_m_largest(Eigen::Ref<Eigen::VectorXd> v, const size_t m,
+void get_m_largest(const Eigen::Ref<Eigen::VectorXd>& v, const size_t m,
                    Eigen::Ref<VecXST> v_largest_idx) {
+  auto t_alloc = std::chrono::steady_clock::now();
   VecXST sorted_idx(v.size());
+  log_timing("Allocation time", t_alloc);
+
+  auto t_argsort = std::chrono::steady_clock::now();
   argsort(v, sorted_idx);
+  log_timing("Argsort time", t_argsort);
+
+  auto t_copy = std::chrono::steady_clock::now();
   std::copy(std::execution::par_unseq, sorted_idx.data(), sorted_idx.data() + m,
             v_largest_idx.data());
+  log_timing("Copy time", t_copy);
 }
 
 void my_parallel_sort(Eigen::Ref<Eigen::VectorXd>& v) {

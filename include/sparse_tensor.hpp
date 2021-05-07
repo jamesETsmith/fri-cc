@@ -29,7 +29,7 @@ class SparseTensor4d {
   const std::array<size_t, 4> dims;
   std::vector<std::array<size_t, 4>> indices;
   std::vector<double> data;
-  std::shared_ptr<SparseTensor4d> this_shared_ptr;
+  // std::shared_ptr<SparseTensor4d> this_shared_ptr;
 
   //
   size_t flat_idx(const int i, const int j, const int a, const int b);
@@ -42,7 +42,7 @@ class SparseTensor4d {
     indices.resize(nnz);
     data.resize(nnz);
   }
-  SparseTensor4d(Eigen::Ref<Eigen::VectorXd> tensor_flat,
+  SparseTensor4d(const Eigen::Ref<Eigen::VectorXd>& tensor_flat,
                  std::array<size_t, 4> dims, const size_t m)
       : dims(dims), nnz(m) {
     indices.resize(m);
@@ -53,7 +53,7 @@ class SparseTensor4d {
     get_m_largest(tensor_flat, m, t_largest_idx);
 
 // Put them into sparse tensor (in parallel)
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for simd schedule(static)
     for (size_t i = 0; i < m; i++) {
       const size_t idx = t_largest_idx[i];
       this->set_element(i, idx, tensor_flat(idx));

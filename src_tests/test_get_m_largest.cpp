@@ -16,7 +16,9 @@ TEST_CASE("M=10 N=100") {
   Eigen::VectorXd v = Eigen::VectorXd::Random(N);
   Eigen::VectorXd v_sorted = v;
   std::sort(v_sorted.data(), v_sorted.data() + v_sorted.size(),
-            std::greater<>());
+            [](const auto& left, const auto& right) {
+              return abs(left) > abs(right);
+            });
 
   VecXST v_largest_idx(M);
   get_m_largest(v, M, v_largest_idx);

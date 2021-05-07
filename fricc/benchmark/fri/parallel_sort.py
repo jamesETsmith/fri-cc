@@ -4,7 +4,7 @@ from fricc import parallel_sort
 
 np.random.seed(20)
 
-n = int(1e8)
+n = int(4e8)
 
 v1 = np.random.random(n).astype(np.float64)
 
