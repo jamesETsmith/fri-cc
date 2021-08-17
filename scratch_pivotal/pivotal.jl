@@ -121,9 +121,33 @@ function sample_pivotal(g, p)
     @assert size(S)[1] == g "Didn't sample the write number of indices!!" 
 end # sample_pivotal
 
-function make_p(x, g, rn)
-    p = broadcast(abs, x) .* (g / rn)
-    @assert maximum(p) < 1 "Some of the probabilities are >=1 "
+function find_d_largest(n_sample::Int, x::Vector{Float64})
+    remaining_norm = norm(x,1)
+    D = []
+    sort_idx = sortperm(x, by=abs, rev=true)
+
+    for i=1:n_sample
+        idx = sort_idx[i]
+        d = length(D)
+        xi = abs(x[idx])
+        if (n_sample-d)*xi >= remaining_norm - xi 
+            append!(D,[idx])
+            remaining_norm -= xi
+            d -= 1
+        else
+            break
+        end
+    end
+    return D, remaining_norm
+end
+
+function make_p(x, g, D, rn)
+    p = zeros(Float64, length(x))
+    indices = [x for x ∈ 1:length(x) if x ∉ D]
+    Threads.@threads for i=1:length(indices)
+        idx = indices[i]
+        p[idx] = abs(x[idx]) * g/rn
+    end
     return p
 end
 
@@ -156,16 +180,25 @@ avg_errors = zeros((2, n_iter))
 
 
 # Make the vector of probabilities
-p = make_p(x, n_sample, norm(x, 1))
-# println(p)
+D, remaining_norm = find_d_largest(n_sample, x)
+D_vals = x[D]
+println(length(D))
+# Make the vector of probabilities
+p = make_p(x, n_sample-length(D), D, remaining_norm)
+println("Sum of p = $(sum(p))")
+println(p)
+
+@assert abs(sum(p) + length(D) - n_sample)/n_sample < 1e-14 "$(abs(sum(p) + length(D) - n_sample))"
 
 # 
 @time begin
     for i = 1:n_iter
     # Sample and collect average
-        S = sample_pivotal(n_sample, p)
+    S = sample_pivotal(n_sample-length(D), p)
         exit(0)
-        sp_v = sparsevec(S, x[S] ./ p[S], vec_size)
+        indices = append!(copy(D), S)
+        vals = append!(copy(D_vals), x[S] ./ p[S] )
+        sp_v = sparsevec(indices, vals, vec_size)
         global x_compare += sp_v
 
     # Keep track of errors

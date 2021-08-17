@@ -1,8 +1,9 @@
 import numpy as np
 from scipy.optimize import curve_fit
-from fricc.py_rccsd import sample_systematic, sample_pivotal
+from fricc.py_rccsd import parallel_sample
 import pytest
 import matplotlib.pyplot as plt
+import time
 
 np.random.seed(20)
 
@@ -72,14 +73,15 @@ def fake_systematic(n_sample, p):
     return S.tolist()
 
 
-vec_size = 10000
-n_sample = 1000
+vec_size = 10000000
+n_sample = 10000
 
 n_iter = 10000
+print_step = 1
 
 # Choosing the vector we want to compress
 x = np.random.rand(vec_size) + np.random.rand(vec_size) * -1.0
-# x = np.ones(vec_size)
+# x = np.ones(vec_size)  # Breaks pivotal
 
 # Error helpers
 norm1 = np.linalg.norm(x, 1)
@@ -95,15 +97,19 @@ print("Length of D", len(D))
 # Make the vector of probabilities
 p = make_p(x, n_sample - len(D), D, remaining_norm)
 print(f"Sum of p = {np.sum(p)}")
-print(p)
+# print(p)
+
 for i in range(n_iter):
     # S = fake_systematic(n_sample - len(D), p)
-    # S = sample_systematic(n_sample - len(D), p)
-    # TODO SOMETHING STILL WRONG WITH PIVOTAL, MAKE SURE WE SAMPLE THE FIRST INDEX
-    S = sample_pivotal(n_sample - len(D), p)
+    t0 = time.time()
+    S = parallel_sample(n_sample - len(D), p)
+    t_sample = time.time() - t0
+    # print(t_sample)
+    exit(0)
     # print(S)
-    # if i > 100:
+    # if i > 1:
     #     exit(0)
+    # print(S)
     x_i = convert_sparse_to_dense(D + S, x[D + S] / p[D + S], vec_size)
     x_compare += x_i
     # print(x_i)
@@ -116,15 +122,17 @@ for i in range(n_iter):
     avg_errors[0, i] = np.linalg.norm(x - x_compare / (i + 1), 1) / norm1
     avg_errors[1, i] = np.linalg.norm(x - x_compare / (i + 1), 2) / norm2
 
-    print(
-        "Iter. {:d}:\tInstant L1: {:.4e}\tAvg L1:{:.2e}\tInstant L2: {:.4e}\tAvg L2: {:.2e}".format(
-            i,
-            instant_errors[0, i],
-            avg_errors[0, i],
-            instant_errors[1, i],
-            avg_errors[1, i],
+    if i % print_step == 0:
+        print(
+            "Iter. {:d}:\tTime (s):{:.2e}\tInstant L1: {:.4e}\tAvg L1:{:.2e}\tInstant L2: {:.4e}\tAvg L2: {:.2e}".format(
+                i,
+                t_sample,
+                instant_errors[0, i],
+                avg_errors[0, i],
+                instant_errors[1, i],
+                avg_errors[1, i],
+            )
         )
-    )
     # if i == 2:
     #     exit(0)
 
@@ -167,4 +175,4 @@ plt.loglog(
 )
 # plt.loglog(iters, np.power(iters, -0.5), label="x^(-1/2)")
 plt.legend()
-plt.savefig("pivotal.png")
+plt.savefig("pivotal_parallel.png")

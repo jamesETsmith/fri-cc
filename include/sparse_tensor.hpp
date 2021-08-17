@@ -49,8 +49,7 @@ class SparseTensor4d {
     data.resize(m);
 
     // Sort dense tensor
-    VecXST t_largest_idx(m);
-    get_m_largest(tensor_flat, m, t_largest_idx);
+    auto t_largest_idx = partial_argsort_paired(tensor_flat, m);
 
 // Put them into sparse tensor (in parallel)
 #pragma omp parallel for simd schedule(static)

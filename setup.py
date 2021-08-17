@@ -14,5 +14,6 @@ setup(
     url="https://github.com/jamesETsmith/fri-cc",
     packages=find_packages(include=("fricc")),
     python_requires=">=3.6",
-    install_requires=["pyscf", "pytest"],
+    # install_requires=["pyscf", "pytest"],
+    install_requires=["pytest"],
 )

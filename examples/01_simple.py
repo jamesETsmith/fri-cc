@@ -26,7 +26,7 @@ benzene = """  H      1.2194     -0.1652      2.1600
   H      2.4836     -0.1022      0.0205"""
 
 
-mol = gto.M(atom=ethane, basis="augccpvdz", verbose=3)
+mol = gto.M(atom=benzene, basis="3-21g", verbose=4)
 
 nocc = mol.nelec[0]
 nvirt = mol.nao_nr() - nocc
@@ -41,10 +41,15 @@ t_ccsd = time.time()
 mycc2.kernel()
 t_ccsd = time.time() - t_ccsd
 
+# User some custom functions instead of the default PySCF ones
 ccsd.CCSD.update_amps = fricc.update_amps
+# ccsd.CCSD.kernel = fricc.kernel
+
+fri_settings = {"m_keep": 40000, "sample": False}
 mycc = cc.CCSD(mf)
 mycc.diis_start_cycle = mycc.max_cycle + 1
-mycc.m_keep = 20000
+mycc.fri_settings = fri_settings
+mycc.max_cycle = 20
 
 t_fricc = time.time()
 mycc.kernel()
@@ -53,3 +58,4 @@ t_fricc = time.time() - t_fricc
 print(f"Error {abs(mycc.e_tot-mycc2.e_tot):.2e}")
 print(f"CCSD     Time {t_ccsd:.1f}")
 print(f"FRI-CCSD Time {t_fricc:.1f}")
+# print(mycc.energies)

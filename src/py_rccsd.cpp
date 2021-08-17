@@ -27,9 +27,15 @@ PYBIND11_MODULE(py_rccsd, m) {
   m.def("make_Wvoov", &make_Wvoov, "Nothing");
   m.def("make_Wvovo", &make_Wvovo, "Nothing");
   //
-  m.def("get_m_largest", &get_m_largest,
-        "Get the m largest elements of a vector.");
-  m.def("parallel_sort", &my_parallel_sort, "");
+  // m.def("get_m_largest", &get_m_largest,
+  //       "Get the m largest elements of a vector.");
+  // m.def("parallel_sort", &my_parallel_sort, "");
+  // m.def("parallel_partial_sort", &my_partial_sort, "");
+  m.def("partial_argsort", &partial_argsort, "");
+  m.def("partial_argsort_paired", &partial_argsort_paired, "");
+  m.def("sample_pivotal", &sample_pivotal, "");
+  m.def("sample_systematic", &sample_systematic, "");
+  m.def("parallel_sample", &parallel_sample, "");
 
   py::class_<SparseTensor4d>(m, "SparseTensor4d")
       .def(py::init<std::array<size_t, 4>, double>())

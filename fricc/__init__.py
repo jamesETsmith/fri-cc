@@ -1,17 +1,22 @@
 import time
 import numpy as np
+import copy
 
 from pyscf.cc import ccsd
 from pyscf import lib
+from pyscf.lib import logger
 from pyscf.cc import rintermediates as imd
 
-from .py_rccsd import get_m_largest
-from .py_rccsd import parallel_sort
+# from .py_rccsd import parallel_partial_sort
+# from .py_rccsd import partial_argsort
+from .py_rccsd import partial_argsort_paired
 from .py_rccsd import SparseTensor4d
 from .py_rccsd import contract_DTSpT
 
 # Deprecated
 from .py_rccsd import update_amps as my_update_amps
+
+numpy = np
 
 
 def update_amps(
@@ -49,7 +54,7 @@ def update_amps(
 
     assert isinstance(eris, ccsd._ChemistsERIs)
 
-    m_keep = cc.m_keep
+    m_keep = cc.fri_settings["m_keep"]
     if m_keep > t2.size or m_keep == 0:
         raise ValueError(
             "Bad m_keep value! The following condition wasn't met 0 < m_keep <= t2.size"
@@ -73,7 +78,7 @@ def update_amps(
     # Compression
     #
     t_compress = time.time()
-    log.info(f"M_KEEP = {m_keep} of {t2.size}")
+    log.debug(f"M_KEEP = {m_keep} of {t2.size}")
     t2_sparse = SparseTensor4d(t2.ravel(), t2.shape, m_keep)
     t_compress = time.time() - t_compress
 
@@ -165,11 +170,78 @@ def update_amps(
     #
     t_update_amps = time.time() - t_update_amps
 
-    log.info(f"Compression Time {t_compress:.3f}")
-    log.info(f"Contraction Time {t_2323:.3f}")
-    log.info(f"Total Time {t_update_amps:.3f}")
+    log.debug(f"Compression Time {t_compress:.3f}")
+    log.debug(f"Contraction Time {t_2323:.3f}")
+    log.debug(f"Total Time {t_update_amps:.3f}")
 
     return t1new, t2new
+
+
+def kernel(
+    mycc,
+    eris=None,
+    t1=None,
+    t2=None,
+    max_cycle=50,
+    tol=1e-8,
+    tolnormt=1e-6,
+    verbose=None,
+):
+    log = logger.new_logger(mycc, verbose)
+    if eris is None:
+        eris = mycc.ao2mo(mycc.mo_coeff)
+    if t1 is None and t2 is None:
+        t1, t2 = mycc.get_init_guess(eris)
+    elif t2 is None:
+        t2 = mycc.get_init_guess(eris)[1]
+
+    cput1 = cput0 = (logger.process_clock(), logger.perf_counter())
+    eold = 0
+    eccsd = mycc.energy(t1, t2, eris)
+    log.info("Init E_corr(CCSD) = %.15g", eccsd)
+
+    if isinstance(mycc.diis, lib.diis.DIIS):
+        adiis = mycc.diis
+    elif mycc.diis:
+        adiis = lib.diis.DIIS(mycc, mycc.diis_file, incore=mycc.incore_complete)
+        adiis.space = mycc.diis_space
+    else:
+        adiis = None
+
+    # Create list of energies so we can access them easily later
+    mycc.energies = []
+    conv = False
+    for istep in range(max_cycle):
+        t1new, t2new = mycc.update_amps(t1, t2, eris)
+        tmpvec = mycc.amplitudes_to_vector(t1new, t2new)
+        tmpvec -= mycc.amplitudes_to_vector(t1, t2)
+        normt = numpy.linalg.norm(tmpvec)
+        tmpvec = None
+        if mycc.iterative_damping < 1.0:
+            alpha = mycc.iterative_damping
+            t1new = (1 - alpha) * t1 + alpha * t1new
+            t2new *= alpha
+            t2new += (1 - alpha) * t2
+        t1, t2 = t1new, t2new
+        t1new = t2new = None
+        t1, t2 = mycc.run_diis(t1, t2, istep, normt, eccsd - eold, adiis)
+        eold, eccsd = eccsd, mycc.energy(t1, t2, eris)
+
+        # Save old energies
+        mycc.energies.append(copy.copy(eccsd))
+        log.info(
+            "cycle = %d  E_corr(CCSD) = %.15g  dE = %.9g  norm(t1,t2) = %.6g",
+            istep + 1,
+            eccsd,
+            eccsd - eold,
+            normt,
+        )
+        cput1 = log.timer("CCSD iter", *cput1)
+        if abs(eccsd - eold) < tol and normt < tolnormt:
+            conv = True
+            break
+    log.timer("CCSD", *cput0)
+    return conv, eccsd, t1, t2
 
 
 #

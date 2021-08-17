@@ -36,7 +36,7 @@ template <typename Clock>
 void log_timing(std::string msg, std::chrono::time_point<Clock> start) {
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double> elapsed = end - start;  // in seconds
-  printf("%-24s %4.2f (s)\n", msg.c_str(), elapsed.count());
+  printf("%-24s %6.4f (s)\n", msg.c_str(), elapsed.count());
 }
 
 #endif
