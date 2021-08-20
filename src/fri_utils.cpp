@@ -18,8 +18,8 @@
 // around in memory. The special type (valuePair) is described in fri_utils.hpp
 // and keeps the index and value "next" to each other in memory.
 //
-std::vector<size_t> partial_argsort_paired(
-    const Eigen::Ref<Eigen::VectorXd>& array, const size_t m) {
+std::vector<size_t> partial_argsort_paired(const std::vector<double>& array,
+                                           const size_t m) {
   std::vector<valuePair> pairs_full(array.size());
 
 #pragma omp parallel for simd
@@ -199,7 +199,7 @@ std::vector<size_t> sample_systematic(const size_t& n_sample,
 // DUMB WAY: TODO FIX ME
 double one_norm(const std::vector<double>& q) {
   double q_norm = 0.0;
-#pragma omp parallel for reduction(+ : q_norm)
+#pragma omp parallel for simd reduction(+ : q_norm)
   for (int i = 0; i < q.size(); i++) {
     q_norm += abs(q[i]);
   }
@@ -359,4 +359,133 @@ std::vector<size_t> parallel_sample(const size_t& n_sample,
   log_timing("Time for parallel work", t_parallel);
 
   return S;
+}
+
+//
+//
+//
+std::vector<double> make_probability_vector(const std::vector<double>& x,
+                                            const size_t n_sample,
+                                            const std::vector<size_t>& D,
+                                            const double remaining_norm) {
+  std::vector<double> p(x.size());
+
+#pragma omp parallel for simd
+  for (size_t i = 0; i < p.size(); i++) {
+    p[i] = abs(x[i]) * n_sample / remaining_norm;
+  }
+
+#pragma omp parallel for
+  for (size_t i = 0; i < D.size(); i++) {
+    p[D[i]] = 0.0;
+  }
+
+  return p;
+}
+
+std::pair<std::vector<size_t>, double> get_d_largest(
+    const std::vector<double>& x, const size_t n_sample) {
+  double remaining_norm = one_norm(x);
+  // std::cout << remaining_norm << std::endl;
+  std::vector<size_t> D;
+  D.reserve(n_sample);
+
+  std::vector<size_t> sort_idx = partial_argsort_paired(x, n_sample);
+
+  for (size_t i = 0; i < n_sample; i++) {
+    auto idx = sort_idx[i];
+    auto d = D.size();
+    auto xi = abs(x[idx]);
+    if ((n_sample - d) * xi >= remaining_norm - xi) {
+      D.push_back(idx);
+      remaining_norm -= xi;
+    } else {
+      break;
+    }
+  }
+
+  return std::make_pair(D, remaining_norm);
+}
+
+std::pair<std::vector<size_t>, std::vector<double>> fri_compression(
+    const std::vector<double>& x, const size_t n_sample,
+    const std::string sampling_method, const bool verbose) {
+  // Input checking
+  if (sampling_method.compare("pivotal") &&
+      sampling_method.compare("systematic")) {
+    std::cerr << "ERROR";
+    std::cerr << "\tThe sampling method you chose (" << sampling_method
+              << ") isn't supported ";
+    std::cerr << "sampling_method must be 'pivotal' or 'systematic'"
+              << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  auto _t_total = std::chrono::steady_clock::now();
+
+  // Setup outputs
+  std::vector<size_t> compressed_idx(n_sample);
+  std::vector<double> compressed_vals(n_sample);
+
+  // Determine the largest elements within budget
+  // Time: O(N*log(N))
+  // Memory: O(2*N)
+  auto _t_get_d_largest = std::chrono::steady_clock::now();
+  auto [D, remaining_norm] = get_d_largest(x, n_sample);
+  auto t_get_d_largest = get_timing(_t_get_d_largest);
+
+  // Calculate a vector of probabilities for sampling each element
+  // Time: O(N)
+  // Memory: O(N)
+  auto _t_p_vector = std::chrono::steady_clock::now();
+  std::vector<double> p =
+      make_probability_vector(x, n_sample - D.size(), D, remaining_norm);
+  auto t_p_vector = get_timing(_t_p_vector);
+
+  // Sample the remaining number of elements we want
+  // Time: O(N)
+  // Memory: O(m)
+  auto _t_sample = std::chrono::steady_clock::now();
+
+  std::vector<size_t> S;
+  if (sampling_method.compare("pivotal")) {
+    S = sample_pivotal(n_sample - D.size(), p);
+  } else if (sampling_method.compare("systematic")) {
+    S = sample_systematic(n_sample - D.size(), p);
+  }
+  auto t_sample = get_timing(_t_sample);
+
+  // Move indices to compressed_idx
+  auto _t_wrap_up = std::chrono::steady_clock::now();
+  std::copy(D.begin(), D.end(), compressed_idx.begin());
+  std::copy(S.begin(), S.end(), compressed_idx.begin() + D.size());
+
+  // Calculate values
+  for (size_t i = 0; i < D.size(); i++) {
+    compressed_vals[i] = x[compressed_idx[i]];
+  }
+
+  for (size_t i = D.size(); i < compressed_idx.size(); i++) {
+    compressed_vals[i] = x[compressed_idx[i]] / p[compressed_idx[i]];
+  }
+  auto t_wrap_up = get_timing(_t_wrap_up);
+
+  // Timing summary
+  auto t_total = get_timing(_t_total);
+  if (verbose) {
+    printf("Subsection    Fraction of Total    Total Time\n");
+    printf("==========    =================    ==========\n");
+    printf("Sorting       %6.4f               %6.4f (s)\n",
+           t_get_d_largest / t_total, t_get_d_largest);
+    printf("P vector      %6.4f               %6.4f (s)\n",
+           t_p_vector / t_total, t_p_vector);
+    printf("Sampling      %6.4f               %6.4f (s)\n", t_sample / t_total,
+           t_sample);
+    printf("Wrap up       %6.4f               %6.4f (s)\n", t_wrap_up / t_total,
+           t_wrap_up);
+    printf("Total         %6.4f               %6.4f (s)\n", t_total / t_total,
+           t_total);
+  }
+
+  return std::make_pair(compressed_idx, compressed_vals);
 }

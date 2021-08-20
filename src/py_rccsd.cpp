@@ -13,6 +13,7 @@
 #include <sparse_tensor.hpp>
 
 namespace py = pybind11;
+using namespace pybind11::literals;
 
 PYBIND11_MODULE(py_rccsd, m) {
   m.def("update_amps", &RCCSD::update_amps,
@@ -33,13 +34,23 @@ PYBIND11_MODULE(py_rccsd, m) {
   // m.def("parallel_partial_sort", &my_partial_sort, "");
   m.def("partial_argsort", &partial_argsort, "");
   m.def("partial_argsort_paired", &partial_argsort_paired, "");
-  m.def("sample_pivotal", &sample_pivotal, "");
-  m.def("sample_systematic", &sample_systematic, "");
-  m.def("parallel_sample", &parallel_sample, "");
+  m.def("sample_pivotal", &sample_pivotal, "", "n_sample"_a,
+        "probs"_a.noconvert());
+  m.def("sample_systematic", &sample_systematic, "", "n_sample"_a,
+        "probs"_a.noconvert());
+  m.def("parallel_sample", &parallel_sample, "", "n_sample"_a,
+        "probs"_a.noconvert());
+
+  m.def("make_probability_vector", &make_probability_vector, "",
+        "x"_a.noconvert(), "n_sample"_a, "D"_a, "remaining_norm"_a.noconvert());
+
+  m.def("get_d_largest", &get_d_largest, "", "n_sample"_a, "x"_a.noconvert());
+  m.def("fri_compression", &fri_compression, "", "x"_a.noconvert(),
+        "n_sample"_a, "sampling_method"_a = "pivotal", "verbose"_a = false);
 
   py::class_<SparseTensor4d>(m, "SparseTensor4d")
       .def(py::init<std::array<size_t, 4>, double>())
-      .def(py::init<Eigen::Ref<Eigen::VectorXd>, std::array<size_t, 4>,
+      .def(py::init<const std::vector<double>&, std::array<size_t, 4>,
                     const size_t>())
       .def("get_element",
            [](SparseTensor4d& sp_tensor, const size_t mi) {

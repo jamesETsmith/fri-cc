@@ -3,6 +3,7 @@
 
 // General imports
 #include <math.h>
+#include <stdlib.h>
 // #include <omp.h>
 // #include <stdio.h>
 
@@ -25,6 +26,20 @@ using TMap4d = Eigen::TensorMap<RowTensor4d>;
 
 // Timing utilities
 /**
+ * @brief Return the elapsed time given a starging time.
+ *
+ * @tparam Clock
+ * @param start
+ * @return double
+ */
+template <typename Clock>
+double get_timing(std::chrono::time_point<Clock> start) {
+  auto end = std::chrono::steady_clock::now();
+  std::chrono::duration<double> elapsed = end - start;  // in seconds
+  return elapsed.count();
+}
+
+/**
  * @brief Given a message and a start time, print the message and the time
  * elapsed since the start time.
  *
@@ -33,10 +48,10 @@ using TMap4d = Eigen::TensorMap<RowTensor4d>;
  * @param start Starting time.
  */
 template <typename Clock>
-void log_timing(std::string msg, std::chrono::time_point<Clock> start) {
-  auto end = std::chrono::steady_clock::now();
-  std::chrono::duration<double> elapsed = end - start;  // in seconds
-  printf("%-24s %6.4f (s)\n", msg.c_str(), elapsed.count());
+double log_timing(std::string msg, std::chrono::time_point<Clock> start) {
+  double time_elapsed = get_timing(start);
+  printf("%-24s %6.4f (s)\n", msg.c_str(), time_elapsed);
+  return time_elapsed;
 }
 
 #endif

@@ -1,6 +1,13 @@
+import time
 import numpy as np
 from scipy.optimize import curve_fit
-from fricc.py_rccsd import sample_systematic, sample_pivotal
+from fricc.py_rccsd import (
+    sample_systematic,
+    sample_pivotal,
+    make_probability_vector,
+    fri_compression,
+)
+from fricc.py_rccsd import get_d_largest
 import pytest
 import matplotlib.pyplot as plt
 
@@ -32,7 +39,7 @@ def find_d_largest(n_sample, x):
         if (n_sample - d) * xi >= remaining_norm - xi:
             D.append(idx)
             remaining_norm -= xi
-            d -= 1
+            # d -= 1
         else:
             break
     return D, remaining_norm
@@ -72,14 +79,21 @@ def fake_systematic(n_sample, p):
     return S.tolist()
 
 
-vec_size = 10000
-n_sample = 1000
+#
+# Run Tests
+#
+vec_size = 100000000
+n_sample = 100000
 
-n_iter = 10000
+n_iter = 5
 
 # Choosing the vector we want to compress
-x = np.random.rand(vec_size) + np.random.rand(vec_size) * -1.0
+# x = np.random.rand(vec_size) + np.random.rand(vec_size) * -1.0
+# x = np.random.rand(vec_size // 4, 2, 2).ravel()
+x = np.random.rand(vec_size) * np.power(np.logspace(1, -10, num=vec_size), 2)
 # x = np.ones(vec_size)
+# print(x)
+# exit(0)
 
 # Error helpers
 norm1 = np.linalg.norm(x, 1)
@@ -88,23 +102,34 @@ x_compare = np.zeros(vec_size)
 instant_errors = np.zeros((2, n_iter))
 avg_errors = np.zeros((2, n_iter))
 
-D, remaining_norm = find_d_largest(n_sample, x)
+# D, remaining_norm = find_d_largest(n_sample, x)
+D, remaining_norm = get_d_largest(x, n_sample)
 D_vals = x[D]
 print("Length of D", len(D))
+# print(remaining_norm)
 
 # Make the vector of probabilities
-p = make_p(x, n_sample - len(D), D, remaining_norm)
-print(f"Sum of p = {np.sum(p)}")
-print(p)
+# p = make_p(x, n_sample - len(D), D, remaining_norm)
+# p = np.array(make_probability_vector(x.ravel(), n_sample - len(D), D, remaining_norm))
+# print(f"Sum of p = {np.sum(p)}")
+# print(p)
+
+t0 = time.time()
 for i in range(n_iter):
     # S = fake_systematic(n_sample - len(D), p)
     # S = sample_systematic(n_sample - len(D), p)
-    # TODO SOMETHING STILL WRONG WITH PIVOTAL, MAKE SURE WE SAMPLE THE FIRST INDEX
-    S = sample_pivotal(n_sample - len(D), p)
-    # print(S)
-    # if i > 100:
+    # S = sample_pivotal(n_sample - len(D), p)
+    # if i > 10:
     #     exit(0)
-    x_i = convert_sparse_to_dense(D + S, x[D + S] / p[D + S], vec_size)
+    # S_vals = x[S] / p[S]
+    # x_i = convert_sparse_to_dense(
+    #     D + S,
+    #     np.concatenate((D_vals, S_vals)),
+    #     vec_size,
+    # )
+    compressed_idx, compressed_vals = fri_compression(x, n_sample, "systematic", True)
+    # print(compressed_vals)
+    x_i = convert_sparse_to_dense(compressed_idx, compressed_vals, vec_size)
     x_compare += x_i
     # print(x_i)
     # print(x_compare)
@@ -129,6 +154,8 @@ for i in range(n_iter):
     #     exit(0)
 
 # print(x_compare)
+total_time = time.time() - t0
+print(f"Total time (s) = {total_time:.3f} (per iteration = {total_time/n_iter:.3f})")
 
 #
 # Curve Fitting

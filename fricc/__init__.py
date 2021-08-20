@@ -228,7 +228,8 @@ def kernel(
         eold, eccsd = eccsd, mycc.energy(t1, t2, eris)
 
         # Save old energies
-        mycc.energies.append(copy.copy(eccsd))
+        mycc.energies.append(copy.deepcopy(eccsd))
+        # print(mycc.energies)
         log.info(
             "cycle = %d  E_corr(CCSD) = %.15g  dE = %.9g  norm(t1,t2) = %.6g",
             istep + 1,

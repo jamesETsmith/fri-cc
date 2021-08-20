@@ -42,7 +42,8 @@ class SparseTensor4d {
     indices.resize(nnz);
     data.resize(nnz);
   }
-  SparseTensor4d(const Eigen::Ref<Eigen::VectorXd>& tensor_flat,
+
+  SparseTensor4d(const std::vector<double>& tensor_flat,
                  std::array<size_t, 4> dims, const size_t m)
       : dims(dims), nnz(m) {
     indices.resize(m);
@@ -55,7 +56,7 @@ class SparseTensor4d {
 #pragma omp parallel for simd schedule(static)
     for (size_t i = 0; i < m; i++) {
       const size_t idx = t_largest_idx[i];
-      this->set_element(i, idx, tensor_flat(idx));
+      this->set_element(i, idx, tensor_flat[idx]);
     }
   }
 
