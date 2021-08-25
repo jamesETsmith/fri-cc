@@ -54,8 +54,10 @@ jobs:
     - name: Python Install
       working-directory: ${{github.workspace}}
       shell: bash
-      run: python3 -m pip install -e .
+      run: |
+        python3 -m pip install pyscf
+        python3 -m pip install -e .
 
     - name: Python Tests
       working-directory: ${{github.workspace}}/py_tests
-      run: pytest -v .
+      run: pytest -v fricc/tests

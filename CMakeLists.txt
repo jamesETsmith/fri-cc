@@ -34,7 +34,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
   endif()
 endif()
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=${ARCH} -Wno-narrowing")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g -march=${ARCH} -Wno-narrowing")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 
 
@@ -91,11 +91,16 @@ install(TARGETS fricc LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/lib)
 if (${CPP_TEST} STREQUAL ON)
   message(STATUS "Building C++ tests. After building, run from the command line with:\n\tmake test")
   enable_testing()
-  add_subdirectory(src_tests)
+  add_subdirectory(src/tests)
 
 else()
   message(STATUS "Skipping build of C++ tests. To set it run:\n\tcmake .. -DCPP_TEST=ON")
 endif()
+
+#
+# Benchmark/Profiling Kernels
+#
+add_subdirectory(src/bench)
 
 #
 # Pybind11 Wrappers/Module

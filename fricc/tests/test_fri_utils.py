@@ -82,15 +82,15 @@ def fake_systematic(n_sample, p):
 #
 # Run Tests
 #
-vec_size = 100000000
-n_sample = 100000
+vec_size = 50000
+n_sample = 5000
 
-n_iter = 5
+n_iter = 10000
 
 # Choosing the vector we want to compress
 # x = np.random.rand(vec_size) + np.random.rand(vec_size) * -1.0
 # x = np.random.rand(vec_size // 4, 2, 2).ravel()
-x = np.random.rand(vec_size) * np.power(np.logspace(1, -10, num=vec_size), 2)
+x = np.random.rand(vec_size) * np.power(np.logspace(1, -10, num=vec_size), 1)
 # x = np.ones(vec_size)
 # print(x)
 # exit(0)
@@ -127,7 +127,7 @@ for i in range(n_iter):
     #     np.concatenate((D_vals, S_vals)),
     #     vec_size,
     # )
-    compressed_idx, compressed_vals = fri_compression(x, n_sample, "systematic", True)
+    compressed_idx, compressed_vals = fri_compression(x, n_sample, "systematic", False)
     # print(compressed_vals)
     x_i = convert_sparse_to_dense(compressed_idx, compressed_vals, vec_size)
     x_compare += x_i
@@ -141,15 +141,16 @@ for i in range(n_iter):
     avg_errors[0, i] = np.linalg.norm(x - x_compare / (i + 1), 1) / norm1
     avg_errors[1, i] = np.linalg.norm(x - x_compare / (i + 1), 2) / norm2
 
-    print(
-        "Iter. {:d}:\tInstant L1: {:.4e}\tAvg L1:{:.2e}\tInstant L2: {:.4e}\tAvg L2: {:.2e}".format(
-            i,
-            instant_errors[0, i],
-            avg_errors[0, i],
-            instant_errors[1, i],
-            avg_errors[1, i],
+    if i % 100 == 0:
+        print(
+            "Iter. {:d}:\tInstant L1: {:.4e}\tAvg L1:{:.2e}\tInstant L2: {:.4e}\tAvg L2: {:.2e}".format(
+                i,
+                instant_errors[0, i],
+                avg_errors[0, i],
+                instant_errors[1, i],
+                avg_errors[1, i],
+            )
         )
-    )
     # if i == 2:
     #     exit(0)
 

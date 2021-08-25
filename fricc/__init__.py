@@ -79,7 +79,14 @@ def update_amps(
     #
     t_compress = time.time()
     log.debug(f"M_KEEP = {m_keep} of {t2.size}")
-    t2_sparse = SparseTensor4d(t2.ravel(), t2.shape, m_keep)
+    t2_sparse = SparseTensor4d(
+        t2.ravel(),
+        t2.shape,
+        m_keep,
+        cc.fri_settings["compression"],
+        cc.fri_settings["sampling_method"],
+        cc.fri_settings["verbose"],
+    )
     t_compress = time.time() - t_compress
 
     #
@@ -187,6 +194,9 @@ def kernel(
     tolnormt=1e-6,
     verbose=None,
 ):
+    # print("MAX_CYCLE=", mycc.max_cycle, max_cycle)
+    max_cycle = mycc.max_cycle  # Hack to force pyscf to respect max_cycles
+
     log = logger.new_logger(mycc, verbose)
     if eris is None:
         eris = mycc.ao2mo(mycc.mo_coeff)

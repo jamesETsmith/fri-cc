@@ -22,14 +22,14 @@ std::vector<size_t> partial_argsort_paired(const std::vector<double>& array,
                                            const size_t m) {
   std::vector<valuePair> pairs_full(array.size());
 
-#pragma omp parallel for simd
+#pragma omp parallel for
   for (size_t i = 0; i < pairs_full.size(); i++) {
     pairs_full[i] = valuePair(i, abs(array[i]));
   }
 
   // auto t_psort = std::chrono::steady_clock::now();
 
-  std::partial_sort(std::execution::par_unseq, pairs_full.begin(),
+  std::partial_sort(std::execution::par, pairs_full.begin(),
                     pairs_full.begin() + m, pairs_full.end(),
                     [](const valuePair& left, const valuePair& right) -> bool {
                       return left.value > right.value;
@@ -38,7 +38,7 @@ std::vector<size_t> partial_argsort_paired(const std::vector<double>& array,
   // log_timing("Sorting time", t_psort);
 
   std::vector<size_t> sorted_idx(m);
-#pragma omp parallel for simd
+#pragma omp parallel for
   for (size_t i = 0; i < m; i++) {
     sorted_idx[i] = pairs_full[i].idx;
   }
@@ -54,7 +54,7 @@ std::vector<size_t> partial_argsort(const Eigen::Ref<Eigen::VectorXd>& array,
   std::vector<size_t> indices_full(array.size());
   std::vector<size_t> sorted_idx(m);
 
-#pragma omp parallel for simd
+#pragma omp parallel for
   for (size_t i = 0; i < indices_full.size(); i++) {
     indices_full[i] = i;
   }
@@ -97,7 +97,7 @@ std::vector<double> lin_space_add_const(const double start, const double stop,
   const double step =
       inclusive ? (stop - start) / (num - 1.) : (stop - start) / num;
 
-#pragma omp simd
+#pragma omp
   for (size_t i = 0; i < num; i++) {
     v[i] = i * step + rn;
   }
@@ -130,10 +130,12 @@ std::vector<size_t> sample_pivotal(const size_t& n_sample,
       a -= 1.;
       double prob_accept = (1. - probs[j]) / (1. - a);
       if (prob_accept > 1 || prob_accept < 0) {
-        std::cout << "ERROR IN PIVOTAL SAMPLING" << std::endl;
-        std::cout << "Pivotal acceptance probability is " << prob_accept
+        std::cerr << "ERROR IN PIVOTAL SAMPLING" << std::endl;
+        std::cerr << "Pivotal acceptance probability is " << prob_accept
                   << std::endl;
-        throw "BAD PROBABILITY";
+        std::cerr << "i = " << i << " j = " << j << std::endl;
+        std::cerr << "a = " << a << " probs[j] = " << probs[j] << std::endl;
+        exit(EXIT_FAILURE);
       }
       if (rn < prob_accept) {
         S.push_back(i);
@@ -146,21 +148,22 @@ std::vector<size_t> sample_pivotal(const size_t& n_sample,
     if (S.size() == n_sample) {
       break;
     }
-    if (j == probs.size() - 1) {
-      if (abs(a - 1.) < 1e-10) {
+    if (j == (probs.size() - 1)) {
+      if (abs(a - 1.) < 1e-5) {
         S.push_back(i);
       } else {
-        std::cout << "ERROR IN PIVOTAL SAMPLING" << std::endl;
-        std::cout << "a - 1 = " << a - 1 << std::endl;
-        std::cout << "Length of S " << S.size() << std::endl;
-        throw "a isn't close enough to 1. ";
+        std::cerr << "ERROR IN PIVOTAL SAMPLING" << std::endl;
+        std::cerr << "a - 1 = " << abs(a - 1.) << std::endl;
+        std::cerr << "Length of S " << S.size() << std::endl;
+        std::cerr << "S should be " << n_sample << std::endl;
+        exit(EXIT_FAILURE);
       }
     }
   }
 
   if (S.size() != n_sample) {
-    std::cout << "Wrong number of elements" << std::endl;
-    throw "S is the wrong size";
+    std::cerr << "Wrong number of elements" << std::endl;
+    exit(EXIT_FAILURE);
   }
 
   return S;
@@ -199,7 +202,7 @@ std::vector<size_t> sample_systematic(const size_t& n_sample,
 // DUMB WAY: TODO FIX ME
 double one_norm(const std::vector<double>& q) {
   double q_norm = 0.0;
-#pragma omp parallel for simd reduction(+ : q_norm)
+#pragma omp parallel for reduction(+ : q_norm)
   for (int i = 0; i < q.size(); i++) {
     q_norm += abs(q[i]);
   }
@@ -370,14 +373,25 @@ std::vector<double> make_probability_vector(const std::vector<double>& x,
                                             const double remaining_norm) {
   std::vector<double> p(x.size());
 
-#pragma omp parallel for simd
+#pragma omp parallel for
   for (size_t i = 0; i < p.size(); i++) {
-    p[i] = abs(x[i]) * n_sample / remaining_norm;
+    p[i] = abs(x[i]) / remaining_norm * n_sample;
   }
 
 #pragma omp parallel for
   for (size_t i = 0; i < D.size(); i++) {
     p[D[i]] = 0.0;
+  }
+
+  for (size_t i = 0; i < p.size(); i++) {
+    if (p[i] > 1.) {
+      std::cerr << "ERROR MAKING PROBABILITY VECTOR" << std::endl;
+      std::cerr << "p[i] = " << p[i] << std::endl;
+      std::cerr << "i = " << i << " abs(x[i]) = " << abs(x[i])
+                << " remaining_norm = " << remaining_norm
+                << " n_sample = " << n_sample << std::endl;
+      // exit(EXIT_FAILURE);
+    }
   }
 
   return p;
@@ -396,13 +410,18 @@ std::pair<std::vector<size_t>, double> get_d_largest(
     auto idx = sort_idx[i];
     auto d = D.size();
     auto xi = abs(x[idx]);
-    if ((n_sample - d) * xi >= remaining_norm - xi) {
+    if ((n_sample - d) * xi >= remaining_norm - xi && remaining_norm > 1e-14) {
       D.push_back(idx);
       remaining_norm -= xi;
     } else {
       break;
     }
   }
+
+  // if (remaining_norm < 1e-12) {
+  //   std::cout << "REMAINING NORM IS VERY SMALL " << remaining_norm <<
+  //   std::endl;
+  // }
 
   return std::make_pair(D, remaining_norm);
 }
@@ -411,8 +430,8 @@ std::pair<std::vector<size_t>, std::vector<double>> fri_compression(
     const std::vector<double>& x, const size_t n_sample,
     const std::string sampling_method, const bool verbose) {
   // Input checking
-  if (sampling_method.compare("pivotal") &&
-      sampling_method.compare("systematic")) {
+  if (!sampling_method.compare("pivotal") &&
+      !sampling_method.compare("systematic")) {
     std::cerr << "ERROR";
     std::cerr << "\tThe sampling method you chose (" << sampling_method
               << ") isn't supported ";
@@ -433,6 +452,7 @@ std::pair<std::vector<size_t>, std::vector<double>> fri_compression(
   auto _t_get_d_largest = std::chrono::steady_clock::now();
   auto [D, remaining_norm] = get_d_largest(x, n_sample);
   auto t_get_d_largest = get_timing(_t_get_d_largest);
+  std::cout << "Size of D " << D.size() << std::endl;
 
   // Calculate a vector of probabilities for sampling each element
   // Time: O(N)
@@ -448,9 +468,9 @@ std::pair<std::vector<size_t>, std::vector<double>> fri_compression(
   auto _t_sample = std::chrono::steady_clock::now();
 
   std::vector<size_t> S;
-  if (sampling_method.compare("pivotal")) {
+  if (!sampling_method.compare("pivotal")) {
     S = sample_pivotal(n_sample - D.size(), p);
-  } else if (sampling_method.compare("systematic")) {
+  } else if (!sampling_method.compare("systematic")) {
     S = sample_systematic(n_sample - D.size(), p);
   }
   auto t_sample = get_timing(_t_sample);

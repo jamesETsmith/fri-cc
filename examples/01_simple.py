@@ -26,7 +26,7 @@ benzene = """  H      1.2194     -0.1652      2.1600
   H      2.4836     -0.1022      0.0205"""
 
 
-mol = gto.M(atom=benzene, basis="3-21g", verbose=4)
+mol = gto.M(atom=benzene, basis="sto3g", verbose=4)
 
 nocc = mol.nelec[0]
 nvirt = mol.nao_nr() - nocc
@@ -45,7 +45,12 @@ t_ccsd = time.time() - t_ccsd
 ccsd.CCSD.update_amps = fricc.update_amps
 # ccsd.CCSD.kernel = fricc.kernel
 
-fri_settings = {"m_keep": 40000, "sample": False}
+fri_settings = {
+    "m_keep": 99225,
+    "compression": "fri",
+    "sampling_method": "systematic",
+    "verbose": True if mol.verbose >= 5 else False,
+}
 mycc = cc.CCSD(mf)
 mycc.diis_start_cycle = mycc.max_cycle + 1
 mycc.fri_settings = fri_settings
@@ -59,3 +64,5 @@ print(f"Error {abs(mycc.e_tot-mycc2.e_tot):.2e}")
 print(f"CCSD     Time {t_ccsd:.1f}")
 print(f"FRI-CCSD Time {t_fricc:.1f}")
 # print(mycc.energies)
+print(f" nocc = {nocc}\nnvirt = {nvirt}")
+print(f"|t2| = {nocc**2 * nvirt**2}")

@@ -44,19 +44,39 @@ class SparseTensor4d {
   }
 
   SparseTensor4d(const std::vector<double>& tensor_flat,
-                 std::array<size_t, 4> dims, const size_t m)
+                 std::array<size_t, 4> dims, const size_t m,
+                 const std::string compression = "fri",
+                 const std::string sampling_method = "pivotal",
+                 const bool verbose = false)
       : dims(dims), nnz(m) {
     indices.resize(m);
     data.resize(m);
 
-    // Sort dense tensor
-    auto t_largest_idx = partial_argsort_paired(tensor_flat, m);
+    // Input Checking
+    if (!compression.compare("largest")) {
+      // Sort dense tensor
+      auto t_largest_idx = partial_argsort_paired(tensor_flat, m);
 
 // Put them into sparse tensor (in parallel)
-#pragma omp parallel for simd schedule(static)
-    for (size_t i = 0; i < m; i++) {
-      const size_t idx = t_largest_idx[i];
-      this->set_element(i, idx, tensor_flat[idx]);
+#pragma omp parallel for schedule(static)
+      for (size_t i = 0; i < m; i++) {
+        const size_t idx = t_largest_idx[i];
+        this->set_element(i, idx, tensor_flat[idx]);
+      }
+    } else if (!compression.compare("fri")) {
+      auto [compressed_idx, compressed_vals] =
+          fri_compression(tensor_flat, m, sampling_method, verbose);
+
+#pragma omp parallel for schedule(static)
+      for (size_t i = 0; i < m; i++) {
+        this->set_element(i, compressed_idx[i], compressed_vals[i]);
+      }
+    } else {
+      std::cerr << "ERROR";
+      std::cerr << "\tThe compression method you chose (" << compression
+                << ") isn't supported ";
+      std::cerr << "compression must be 'largest' or 'fri'" << std::endl;
+      exit(EXIT_FAILURE);
     }
   }
 
@@ -83,11 +103,11 @@ class SparseTensor4d {
   void print() { std::cout << *this << std::endl; }
 };
 
-void contract_SparseTensor4d(RowTensor4d& W, SparseTensor4d& T,
-                             RowTensor4d& output, const std::string term);
+// void contract_SparseTensor4d(RowTensor4d& W, SparseTensor4d& T,
+//                              RowTensor4d& output, const std::string term);
 
-void contract_SparseTensor4d_2323(RowTensor4d& W, SparseTensor4d& T,
-                                  RowTensor4d& output);
+// void contract_SparseTensor4d_2323(RowTensor4d& W, SparseTensor4d& T,
+//                                   RowTensor4d& output);
 void contract_SparseTensor4d_2323_wrapper(TMap4d& W, SparseTensor4d& T,
                                           TMap4d& output);
 
