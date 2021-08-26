@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="fri-cc",  # Replace with your own username
+    name="fri-cc",
     version="0.0.1",
     author="James E. T. Smith",
     author_email="james.smith9113@gmail.com",
@@ -15,5 +15,5 @@ setup(
     packages=find_packages(include=("fricc")),
     python_requires=">=3.6",
     # install_requires=["pyscf", "pytest"],
-    install_requires=["pytest"],
+    install_requires=["pytest", "emcee"],
 )

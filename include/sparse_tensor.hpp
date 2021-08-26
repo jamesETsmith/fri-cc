@@ -63,6 +63,8 @@ class SparseTensor4d {
         const size_t idx = t_largest_idx[i];
         this->set_element(i, idx, tensor_flat[idx]);
       }
+
+      // Fast randomized iteration (FRI) compression
     } else if (!compression.compare("fri")) {
       auto [compressed_idx, compressed_vals] =
           fri_compression(tensor_flat, m, sampling_method, verbose);
@@ -71,6 +73,8 @@ class SparseTensor4d {
       for (size_t i = 0; i < m; i++) {
         this->set_element(i, compressed_idx[i], compressed_vals[i]);
       }
+
+      // Bad compression method
     } else {
       std::cerr << "ERROR";
       std::cerr << "\tThe compression method you chose (" << compression

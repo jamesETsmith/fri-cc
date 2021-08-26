@@ -12,6 +12,7 @@ int main(int argc, char** argv) {
     nocc = 40;
     nvirt = 80;
     frac = 1e-2;
+    // Default settings originally took 4.0293 (s)
   } else {
     std::cout << "Setting args from command line" << std::endl;
     std::string _nocc = argv[1], _nvirt = argv[2], _frac = argv[3];
@@ -20,11 +21,12 @@ int main(int argc, char** argv) {
     frac = std::stod(_frac);
   }
 
-  // Convenience variables
+  // Print what's happening
   t2_size = nocc * nocc * nvirt * nvirt;
   n_sample = t2_size * frac;
   std::cout << "|T_ijab| = " << t2_size << std::endl;
   std::cout << "|Wvvvv| = " << nvirt * nvirt * nvirt * nvirt << std::endl;
+  std::cout << "|T_sparse| = " << n_sample << std::endl;
 
   // Populate data structures
   std::vector<double> t2_old(t2_size);

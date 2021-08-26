@@ -6,10 +6,8 @@ from pyscf.cc import ccsd
 from pyscf import lib
 from pyscf.lib import logger
 from pyscf.cc import rintermediates as imd
+from emcee.autocorr import integrated_time
 
-# from .py_rccsd import parallel_partial_sort
-# from .py_rccsd import partial_argsort
-from .py_rccsd import partial_argsort_paired
 from .py_rccsd import SparseTensor4d
 from .py_rccsd import contract_DTSpT
 
@@ -176,10 +174,13 @@ def update_amps(
     # Timing
     #
     t_update_amps = time.time() - t_update_amps
+    fri_time_frac = (t_compress + t_2323) / t_update_amps
 
-    log.debug(f"Compression Time {t_compress:.3f}")
-    log.debug(f"Contraction Time {t_2323:.3f}")
-    log.debug(f"Total Time {t_update_amps:.3f}")
+    log.debug(f"FRI: Compression Time {t_compress:.3f}")
+    log.debug(f"FRI: Contraction Time {t_2323:.3f}")
+    log.debug(
+        f"FRI: CCSD Total Time {t_update_amps:.3f} FRI-related fraction = {fri_time_frac:.3f}"
+    )
 
     return t1new, t2new
 
@@ -287,3 +288,9 @@ def update_amps_wrapper(t1, t2, eris):
     )
 
     return t1_new, t2_new
+
+
+def mcmc_std(vals: np.ndarray) -> list:
+    tau_f = integrated_time(vals)[0]
+    # print(tau_f, vals.size, np.var(vals))
+    return np.sqrt(tau_f / vals.size * np.var(vals)), tau_f

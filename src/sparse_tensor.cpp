@@ -16,9 +16,10 @@ std::array<size_t, 4> SparseTensor4d::unpack_idx(const size_t idx) {
   // TODO take out for performance
   for (int i = 0; i < 4; i++) {
     if (idx_arr[i] >= dims[i]) {
-      std::cout << "ERROR: " << idx_arr[i] << " >= " << dims[i]
+      std::cerr << "ERROR: " << idx_arr[i] << " >= " << dims[i]
                 << " for dimension " << i << " !!!" << std::endl;
-      throw "Indices are out of range for given tensor";
+      std::cerr << "Indices are out of range for given tensor" << std::endl;
+      exit(EXIT_FAILURE);
     }
   }
   return idx_arr;
@@ -27,7 +28,9 @@ std::array<size_t, 4> SparseTensor4d::unpack_idx(const size_t idx) {
 void SparseTensor4d::set_element(const size_t mi, const size_t idx,
                                  const double value) {
   if (mi > nnz) {
-    throw "Index you requested is larger than the specified size";
+    std::cerr << "Index you requested is larger than the specified size"
+              << std::endl;
+    exit(EXIT_FAILURE);
   }
   indices[mi] = unpack_idx(idx);
   data[mi] = value;
@@ -146,18 +149,17 @@ void contract_SparseTensor4d_2323_wrapper(
          db = W.dimensions()[1];
   const size_t sp_size = T.size();
 
-#pragma omp parallel for schedule(dynamic)
+  std::array<size_t, 4> idx;
+  double value;
+#pragma omp parallel for schedule(dynamic) collapse(2) private(idx, value)
   for (size_t i = 0; i < di; i++) {
     for (size_t j = 0; j < dj; j++) {
       // Loop over sparse indices
       for (size_t s = 0; s < sp_size; s++) {
-        std::array<size_t, 4> idx;
-        double value;
         T.get_element(s, idx, value);
         if (idx[0] == i && idx[1] == j) {
           size_t c = idx[2], d = idx[3];
           for (size_t a = 0; a < da; a++) {
-            // #pragma unroll
             for (size_t b = 0; b < db; b++) {
               output(i, j, a, b) += W(a, b, c, d) * value;
             }
@@ -461,6 +463,7 @@ void contract_SparseTensor4d_wrapper(Eigen::Ref<Eigen::VectorXd>& W_vec,
   } else if (term == "0312") {
     contract_SparseTensor4d_0312_wrapper(W_vec, T, output_vec);
   } else {
-    throw "CASE NOT IMPLEMENTED";
+    std::cerr < "CASE NOT IMPLEMENTED" << std::endl;
+    exit(EXIT_FAILURE);
   }
 }
