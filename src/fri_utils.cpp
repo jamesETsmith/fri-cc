@@ -97,7 +97,7 @@ std::vector<double> lin_space_add_const(const double start, const double stop,
   const double step =
       inclusive ? (stop - start) / (num - 1.) : (stop - start) / num;
 
-#pragma omp
+#pragma omp parallel for simd
   for (size_t i = 0; i < num; i++) {
     v[i] = i * step + rn;
   }
