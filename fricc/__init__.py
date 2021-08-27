@@ -11,10 +11,15 @@ from emcee.autocorr import integrated_time
 from .py_rccsd import SparseTensor4d
 from .py_rccsd import contract_DTSpT
 
-# Deprecated
-from .py_rccsd import update_amps as my_update_amps
-
 numpy = np
+
+default_fri_settings = {
+    "m_keep": 1000,
+    "compression": "fri",
+    "sampling_method": "systematic",
+    "verbose": False,
+    "compressed_contractions": ["O^2V^4"],
+}
 
 
 def update_amps(
@@ -58,6 +63,16 @@ def update_amps(
             "Bad m_keep value! The following condition wasn't met 0 < m_keep <= t2.size"
         )
 
+    # Check FRI settings
+    for k, v in default_fri_settings.items():
+        if k not in cc.fri_settings.keys():
+            cc.fri_settings[k] = v
+
+    # TODO add input checks
+
+    compressed_contractions = cc.fri_settings["compressed_contractions"]
+    contraction_timings = {}
+
     #
     # Shorthands
     #
@@ -80,7 +95,7 @@ def update_amps(
     t2_sparse = SparseTensor4d(
         t2.ravel(),
         t2.shape,
-        m_keep,
+        int(m_keep),
         cc.fri_settings["compression"],
         cc.fri_settings["sampling_method"],
         cc.fri_settings["verbose"],
@@ -142,28 +157,67 @@ def update_amps(
     Wvvvv = imd.cc_Wvvvv(t1, t2, eris)
 
     # Splitting up some of the taus
-    tau = t2 + np.einsum("ia,jb->ijab", t1, t1)
-    t2new += lib.einsum("klij,klab->ijab", Woooo, tau)
+    if "O^4V^2" in compressed_contractions:
+        t2new += lib.einsum("klij,ka,lb->ijab", Woooo, t1, t1)
+        t_0101 = time.time()
+        contract_DTSpT(Woooo.ravel(), t2_sparse, t2new.ravel(), "0101")
+        contraction_timings["0101"] = time.time() - t_0101
+    else:
+        tau = t2 + np.einsum("ia,jb->ijab", t1, t1)
+        t2new += lib.einsum("klij,klab->ijab", Woooo, tau)
 
-    #
+    # FRI-Compressed contraction
     # ORIGINAL: t2new += lib.einsum("abcd,ijcd->ijab", Wvvvv, tau)
-    # t2new += lib.einsum("abcd,ijcd->ijab", Wvvvv, t2)
     t2new += lib.einsum("abcd,ia,jb->ijab", Wvvvv, t1, t1)
-    t_2323 = time.time()
-    contract_DTSpT(Wvvvv.ravel(), t2_sparse, t2new.ravel(), "2323")
-    t_2323 = time.time() - t_2323
+    if "O^2V^4" in compressed_contractions:
+        t_2323 = time.time()
+        contract_DTSpT(Wvvvv.ravel(), t2_sparse, t2new.ravel(), "2323")
+        contraction_timings["2323"] = time.time() - t_2323
+    else:
+        t2new += lib.einsum("abcd,ijcd->ijab", Wvvvv, t2)
 
     tmp = lib.einsum("ac,ijcb->ijab", Lvv, t2)
     t2new += tmp + tmp.transpose(1, 0, 3, 2)
     tmp = lib.einsum("ki,kjab->ijab", Loo, t2)
     t2new -= tmp + tmp.transpose(1, 0, 3, 2)
-    tmp = 2 * lib.einsum("akic,kjcb->ijab", Wvoov, t2)
-    tmp -= lib.einsum("akci,kjcb->ijab", Wvovo, t2)
-    t2new += tmp + tmp.transpose(1, 0, 3, 2)
-    tmp = lib.einsum("akic,kjbc->ijab", Wvoov, t2)
-    t2new -= tmp + tmp.transpose(1, 0, 3, 2)
-    tmp = lib.einsum("bkci,kjac->ijab", Wvovo, t2)
-    t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+
+    # FRI-Compressed contraction
+    if "O^3V^3" in compressed_contractions:
+        tmp = np.zeros_like(t2new)
+        t_1302 = time.time()
+        contract_DTSpT(Wvoov.ravel(), t2_sparse, tmp.ravel(), "1302")
+        contraction_timings["1302"] = time.time() - t_1302
+
+        t_1202 = time.time()
+        contract_DTSpT(Wvovo.ravel(), t2_sparse, tmp.ravel(), "1202")
+        contraction_timings["1202"] = time.time() - t_1202
+
+        t2new += tmp + tmp.transpose(1, 0, 3, 2)
+
+        tmp = np.zeros_like(t2new)
+        t_1303 = time.time()
+        contract_DTSpT(Wvoov.ravel(), t2_sparse, tmp.ravel(), "1303")
+        contraction_timings["1303"] = time.time() - t_1303
+
+        t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+
+        tmp = np.zeros_like(t2new)
+        t_1203 = time.time()
+        contract_DTSpT(Wvovo.ravel(), t2_sparse, tmp.ravel(), "1203")
+        contraction_timings["1203"] = time.time() - t_1203
+        t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+
+    else:
+        tmp = 2 * lib.einsum("akic,kjcb->ijab", Wvoov, t2)
+        tmp -= lib.einsum("akci,kjcb->ijab", Wvovo, t2)
+
+        t2new += tmp + tmp.transpose(1, 0, 3, 2)
+
+        tmp = lib.einsum("akic,kjbc->ijab", Wvoov, t2)
+        t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+
+        tmp = lib.einsum("bkci,kjac->ijab", Wvovo, t2)
+        t2new -= tmp + tmp.transpose(1, 0, 3, 2)
 
     eia = mo_e_o[:, None] - mo_e_v
     eijab = lib.direct_sum("ia,jb->ijab", eia, eia)
@@ -174,12 +228,17 @@ def update_amps(
     # Timing
     #
     t_update_amps = time.time() - t_update_amps
-    fri_time_frac = (t_compress + t_2323) / t_update_amps
 
-    log.debug(f"FRI: Compression Time {t_compress:.3f}")
-    log.debug(f"FRI: Contraction Time {t_2323:.3f}")
+    log.debug(f"\nFRI: Compression Time {t_compress:.3f}")
+
+    fri_time = copy.copy(t_compress)
+    for k, v in contraction_timings.items():
+        log.debug(f"FRI: Contraction {k} Time: {v:.3f} (s)")
+        fri_time += v
+    fri_time_frac = (fri_time) / t_update_amps
+
     log.debug(
-        f"FRI: CCSD Total Time {t_update_amps:.3f} FRI-related fraction = {fri_time_frac:.3f}"
+        f"FRI: CCSD Total Time {t_update_amps:.3f} FRI-related fraction = {fri_time_frac:.3f}\n"
     )
 
     return t1new, t2new
