@@ -55,7 +55,7 @@ jobs:
       working-directory: ${{github.workspace}}
       shell: bash
       run: |
-        python3 -m pip install pyscf
+        python3 -m pip install git+https://github.com/pyscf/pyscf
         python3 -m pip install -e .
 
     - name: Python Tests
