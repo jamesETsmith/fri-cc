@@ -66,7 +66,9 @@ class SparseTensor4d {
 
       // Fast randomized iteration (FRI) compression
     } else if (!compression.compare("fri")) {
-      auto [compressed_idx, compressed_vals] =
+      std::vector<size_t> compressed_idx;
+      std::vector<double> compressed_vals;
+      std::tie(compressed_idx, compressed_vals) =
           fri_compression(tensor_flat, m, sampling_method, verbose);
 
 #pragma omp parallel for schedule(static)

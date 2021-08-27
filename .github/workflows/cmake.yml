@@ -60,4 +60,4 @@ jobs:
 
     - name: Python Tests
       working-directory: ${{github.workspace}}
-      run: pytest -v fricc/tests
+      run: H5PY_DEFAULT_READONLY="TRUE" pytest -v fricc/tests
