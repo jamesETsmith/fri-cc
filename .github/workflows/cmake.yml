@@ -55,9 +55,10 @@ jobs:
       working-directory: ${{github.workspace}}
       shell: bash
       run: |
-        python3 -m pip install git+https://github.com/pyscf/pyscf
+        python3 -m pip install h5py==2.10.0
+        python3 -m pip install pyscf
         python3 -m pip install -e .
 
     - name: Python Tests
       working-directory: ${{github.workspace}}
-      run: H5PY_DEFAULT_READONLY="TRUE" pytest -v fricc/tests
+      run: pytest -v fricc/tests
