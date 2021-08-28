@@ -58,6 +58,7 @@ jobs:
         python3 -m pip install h5py==2.10.0
         python3 -m pip install pyscf
         python3 -m pip install -e .
+        python3 -m pip install matplotlib
 
     - name: Python Tests
       working-directory: ${{github.workspace}}
