@@ -59,3 +59,4 @@ The second is a Python-based test suite, which you can run after following the i
 
 ## Benchmarking
 Benchmarking is done from Python and scripts are contained in `fricc/benchmark`.
+

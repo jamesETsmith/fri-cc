@@ -72,107 +72,107 @@ def fake_systematic(n_sample, p):
                 break
     return S.tolist()
 
+if __name__ == "__main__":
+    vec_size = 10000000
+    n_sample = 10000
 
-vec_size = 10000000
-n_sample = 10000
+    n_iter = 10000
+    print_step = 1
 
-n_iter = 10000
-print_step = 1
+    # Choosing the vector we want to compress
+    x = np.random.rand(vec_size) + np.random.rand(vec_size) * -1.0
+    # x = np.ones(vec_size)  # Breaks pivotal
 
-# Choosing the vector we want to compress
-x = np.random.rand(vec_size) + np.random.rand(vec_size) * -1.0
-# x = np.ones(vec_size)  # Breaks pivotal
+    # Error helpers
+    norm1 = np.linalg.norm(x, 1)
+    norm2 = np.linalg.norm(x, 2)
+    x_compare = np.zeros(vec_size)
+    instant_errors = np.zeros((2, n_iter))
+    avg_errors = np.zeros((2, n_iter))
 
-# Error helpers
-norm1 = np.linalg.norm(x, 1)
-norm2 = np.linalg.norm(x, 2)
-x_compare = np.zeros(vec_size)
-instant_errors = np.zeros((2, n_iter))
-avg_errors = np.zeros((2, n_iter))
+    D, remaining_norm = find_d_largest(n_sample, x)
+    D_vals = x[D]
+    print("Length of D", len(D))
 
-D, remaining_norm = find_d_largest(n_sample, x)
-D_vals = x[D]
-print("Length of D", len(D))
+    # Make the vector of probabilities
+    p = make_p(x, n_sample - len(D), D, remaining_norm)
+    print(f"Sum of p = {np.sum(p)}")
+    # print(p)
 
-# Make the vector of probabilities
-p = make_p(x, n_sample - len(D), D, remaining_norm)
-print(f"Sum of p = {np.sum(p)}")
-# print(p)
+    for i in range(n_iter):
+        # S = fake_systematic(n_sample - len(D), p)
+        t0 = time.time()
+        S = parallel_sample(n_sample - len(D), p)
+        t_sample = time.time() - t0
+        # print(t_sample)
+        exit(0)
+        # print(S)
+        # if i > 1:
+        #     exit(0)
+        # print(S)
+        x_i = convert_sparse_to_dense(D + S, x[D + S] / p[D + S], vec_size)
+        x_compare += x_i
+        # print(x_i)
+        # print(x_compare)
 
-for i in range(n_iter):
-    # S = fake_systematic(n_sample - len(D), p)
-    t0 = time.time()
-    S = parallel_sample(n_sample - len(D), p)
-    t_sample = time.time() - t0
-    # print(t_sample)
-    exit(0)
-    # print(S)
-    # if i > 1:
-    #     exit(0)
-    # print(S)
-    x_i = convert_sparse_to_dense(D + S, x[D + S] / p[D + S], vec_size)
-    x_compare += x_i
-    # print(x_i)
+        # Track errors
+
+        instant_errors[0, i] = np.linalg.norm(x - x_i, 1) / norm1
+        instant_errors[1, i] = np.linalg.norm(x - x_i, 2) / norm2
+        avg_errors[0, i] = np.linalg.norm(x - x_compare / (i + 1), 1) / norm1
+        avg_errors[1, i] = np.linalg.norm(x - x_compare / (i + 1), 2) / norm2
+
+        if i % print_step == 0:
+            print(
+                "Iter. {:d}:\tTime (s):{:.2e}\tInstant L1: {:.4e}\tAvg L1:{:.2e}\tInstant L2: {:.4e}\tAvg L2: {:.2e}".format(
+                    i,
+                    t_sample,
+                    instant_errors[0, i],
+                    avg_errors[0, i],
+                    instant_errors[1, i],
+                    avg_errors[1, i],
+                )
+            )
+        # if i == 2:
+        #     exit(0)
+
     # print(x_compare)
 
-    # Track errors
+    #
+    # Curve Fitting
+    #
 
-    instant_errors[0, i] = np.linalg.norm(x - x_i, 1) / norm1
-    instant_errors[1, i] = np.linalg.norm(x - x_i, 2) / norm2
-    avg_errors[0, i] = np.linalg.norm(x - x_compare / (i + 1), 1) / norm1
-    avg_errors[1, i] = np.linalg.norm(x - x_compare / (i + 1), 2) / norm2
-
-    if i % print_step == 0:
-        print(
-            "Iter. {:d}:\tTime (s):{:.2e}\tInstant L1: {:.4e}\tAvg L1:{:.2e}\tInstant L2: {:.4e}\tAvg L2: {:.2e}".format(
-                i,
-                t_sample,
-                instant_errors[0, i],
-                avg_errors[0, i],
-                instant_errors[1, i],
-                avg_errors[1, i],
-            )
-        )
-    # if i == 2:
-    #     exit(0)
-
-# print(x_compare)
-
-#
-# Curve Fitting
-#
-
-iters = np.arange(n_iter) + 1
+    iters = np.arange(n_iter) + 1
 
 
-def power_law(x: np.array, a: float, b: float) -> np.array:
-    return a * np.power(x, b)
+    def power_law(x: np.array, a: float, b: float) -> np.array:
+        return a * np.power(x, b)
 
 
-popt1, _ = curve_fit(power_law, iters, avg_errors[0, :])
-popt2, _ = curve_fit(power_law, iters, avg_errors[1, :])
+    popt1, _ = curve_fit(power_law, iters, avg_errors[0, :])
+    popt2, _ = curve_fit(power_law, iters, avg_errors[1, :])
 
 
-#
-# Plot
-#
-plt.figure()
-plt.loglog(iters, avg_errors[0, :], label="L1 Error", color="tab:blue")
-plt.loglog(iters, avg_errors[1, :], label="L2 Error", color="tab:orange")
-plt.loglog(
-    iters,
-    power_law(iters, *popt1),
-    label=f"L1 Fit: x^({popt1[1]:0.2f})",
-    linestyle="--",
-    color="tab:blue",
-)
-plt.loglog(
-    iters,
-    power_law(iters, *popt2),
-    label=f"L2 Fit: x^({popt2[1]:0.2f})",
-    linestyle="--",
-    color="tab:orange",
-)
-# plt.loglog(iters, np.power(iters, -0.5), label="x^(-1/2)")
-plt.legend()
-plt.savefig("pivotal_parallel.png")
+    #
+    # Plot
+    #
+    plt.figure()
+    plt.loglog(iters, avg_errors[0, :], label="L1 Error", color="tab:blue")
+    plt.loglog(iters, avg_errors[1, :], label="L2 Error", color="tab:orange")
+    plt.loglog(
+        iters,
+        power_law(iters, *popt1),
+        label=f"L1 Fit: x^({popt1[1]:0.2f})",
+        linestyle="--",
+        color="tab:blue",
+    )
+    plt.loglog(
+        iters,
+        power_law(iters, *popt2),
+        label=f"L2 Fit: x^({popt2[1]:0.2f})",
+        linestyle="--",
+        color="tab:orange",
+    )
+    # plt.loglog(iters, np.power(iters, -0.5), label="x^(-1/2)")
+    plt.legend()
+    plt.savefig("pivotal_parallel.png")

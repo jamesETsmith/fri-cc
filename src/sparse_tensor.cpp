@@ -1,3 +1,5 @@
+#include <omp.h>
+
 #include <sparse_tensor.hpp>
 
 inline size_t SparseTensor4d::flat_idx(const int i, const int j, const int a,
@@ -37,8 +39,8 @@ void SparseTensor4d::set_element(const size_t mi, const size_t idx,
 }
 
 void SparseTensor4d::get_element(const size_t mi,
-                                 std::array<size_t, 4>& idx_arr,
-                                 double& value) {
+                                 std::array<size_t, 4> &idx_arr,
+                                 double &value) {
   idx_arr = indices[mi];
   value = data[mi];
 }
@@ -49,8 +51,8 @@ void SparseTensor4d::get_element(const size_t mi,
 
 // 0101 O^4V^2
 void contract_SparseTensor4d_0101_wrapper(
-    Eigen::Ref<Eigen::VectorXd>& W_vec, SparseTensor4d& T,
-    Eigen::Ref<Eigen::VectorXd>& output_vec) {
+    Eigen::Ref<Eigen::VectorXd> &W_vec, SparseTensor4d &T,
+    Eigen::Ref<Eigen::VectorXd> &output_vec) {
   const size_t no = T.dimension(0);
   const size_t nv = T.dimension(2);
   TMap4d W(W_vec.data(), no, no, no, no);
@@ -80,8 +82,8 @@ void contract_SparseTensor4d_0101_wrapper(
 
 // 2323 O^2V^4 `t2new += lib.einsum('abcd,ijcd->ijab', Wvvvv, tau)`
 void contract_SparseTensor4d_2323_wrapper(
-    Eigen::Ref<Eigen::VectorXd>& W_vec, SparseTensor4d& T,
-    Eigen::Ref<Eigen::VectorXd>& output_vec) {
+    Eigen::Ref<Eigen::VectorXd> &W_vec, SparseTensor4d &T,
+    Eigen::Ref<Eigen::VectorXd> &output_vec) {
   const size_t no = T.dimension(0);
   const size_t nv = T.dimension(2);
   TMap4d W(W_vec.data(), nv, nv, nv, nv);
@@ -114,8 +116,8 @@ void contract_SparseTensor4d_2323_wrapper(
 
 // 1302 O^3V^3 `tmp  = 2*lib.einsum('akic,kjcb->ijab', Wvoov, t2)`
 void contract_SparseTensor4d_1302_wrapper(
-    Eigen::Ref<Eigen::VectorXd>& W_vec, SparseTensor4d& T,
-    Eigen::Ref<Eigen::VectorXd>& output_vec) {
+    Eigen::Ref<Eigen::VectorXd> &W_vec, SparseTensor4d &T,
+    Eigen::Ref<Eigen::VectorXd> &output_vec) {
   const size_t no = T.dimension(0);
   const size_t nv = T.dimension(2);
   TMap4d W(W_vec.data(), nv, no, no, nv);
@@ -146,8 +148,8 @@ void contract_SparseTensor4d_1302_wrapper(
 
 //  O^3V^3 `tmp -=   lib.einsum('akci,kjcb->ijab', Wvovo, t2)`
 void contract_SparseTensor4d_1202_wrapper(
-    Eigen::Ref<Eigen::VectorXd>& W_vec, SparseTensor4d& T,
-    Eigen::Ref<Eigen::VectorXd>& output_vec) {
+    Eigen::Ref<Eigen::VectorXd> &W_vec, SparseTensor4d &T,
+    Eigen::Ref<Eigen::VectorXd> &output_vec) {
   const size_t no = T.dimension(0);
   const size_t nv = T.dimension(2);
   TMap4d W(W_vec.data(), nv, no, nv, no);
@@ -178,8 +180,8 @@ void contract_SparseTensor4d_1202_wrapper(
 
 // 1303 O^3V^3 `tmp = lib.einsum('akic,kjbc->ijab', Wvoov, t2)`
 void contract_SparseTensor4d_1303_wrapper(
-    Eigen::Ref<Eigen::VectorXd>& W_vec, SparseTensor4d& T,
-    Eigen::Ref<Eigen::VectorXd>& output_vec) {
+    Eigen::Ref<Eigen::VectorXd> &W_vec, SparseTensor4d &T,
+    Eigen::Ref<Eigen::VectorXd> &output_vec) {
   const size_t no = T.dimension(0);
   const size_t nv = T.dimension(2);
   TMap4d W(W_vec.data(), nv, no, no, nv);
@@ -210,8 +212,8 @@ void contract_SparseTensor4d_1303_wrapper(
 
 // 1203 O^3V^3 `tmp = lib.einsum('bkci,kjac->ijab', Wvovo, t2)`
 void contract_SparseTensor4d_1203_wrapper(
-    Eigen::Ref<Eigen::VectorXd>& W_vec, SparseTensor4d& T,
-    Eigen::Ref<Eigen::VectorXd>& output_vec) {
+    Eigen::Ref<Eigen::VectorXd> &W_vec, SparseTensor4d &T,
+    Eigen::Ref<Eigen::VectorXd> &output_vec) {
   const size_t no = T.dimension(0);
   const size_t nv = T.dimension(2);
   TMap4d W(W_vec.data(), nv, no, nv, no);
@@ -242,8 +244,8 @@ void contract_SparseTensor4d_1203_wrapper(
 
 // O^4V^2 `Wklij += lib.einsum('kcld,ijcd->klij', eris_ovov, t2)`
 void contract_SparseTensor4d_1323_wrapper(
-    Eigen::Ref<Eigen::VectorXd>& ovov_vec, SparseTensor4d& T,
-    Eigen::Ref<Eigen::VectorXd>& output_vec) {
+    Eigen::Ref<Eigen::VectorXd> &ovov_vec, SparseTensor4d &T,
+    Eigen::Ref<Eigen::VectorXd> &output_vec) {
   const size_t no = T.dimension(0);
   const size_t nv = T.dimension(2);
   TMap4d ovov(ovov_vec.data(), no, nv, no, nv);
@@ -262,7 +264,6 @@ void contract_SparseTensor4d_1323_wrapper(
           size_t c = idx[2], d = idx[3];
           for (size_t k = 0; k < no; k++) {
             for (size_t l = 0; l < no; l++) {
-              // #pragma unroll
               output(k, l, i, j) += ovov(k, c, l, d) * value;
             }
           }
@@ -274,8 +275,8 @@ void contract_SparseTensor4d_1323_wrapper(
 
 // O^3V^3 `Wakic -= 0.5*lib.einsum('ldkc,ilda->akic', eris_ovov, t2)`
 void contract_SparseTensor4d_0112_wrapper(
-    Eigen::Ref<Eigen::VectorXd>& ovov_vec, SparseTensor4d& T,
-    Eigen::Ref<Eigen::VectorXd>& output_vec) {
+    Eigen::Ref<Eigen::VectorXd> &ovov_vec, SparseTensor4d &T,
+    Eigen::Ref<Eigen::VectorXd> &output_vec) {
   const size_t no = T.dimension(0);
   const size_t nv = T.dimension(2);
   TMap4d ovov(ovov_vec.data(), no, nv, no, nv);
@@ -306,8 +307,8 @@ void contract_SparseTensor4d_0112_wrapper(
 
 // O^3V^3 `Wakic -= 0.5*lib.einsum('lckd,ilad->akic', eris_ovov, t2)`
 void contract_SparseTensor4d_0313_wrapper(
-    Eigen::Ref<Eigen::VectorXd>& ovov_vec, SparseTensor4d& T,
-    Eigen::Ref<Eigen::VectorXd>& output_vec) {
+    Eigen::Ref<Eigen::VectorXd> &ovov_vec, SparseTensor4d &T,
+    Eigen::Ref<Eigen::VectorXd> &output_vec) {
   const size_t no = T.dimension(0);
   const size_t nv = T.dimension(2);
   TMap4d ovov(ovov_vec.data(), no, nv, no, nv);
@@ -336,10 +337,41 @@ void contract_SparseTensor4d_0313_wrapper(
   }
 }
 
+// O^3V^3 `Wakic += lib.einsum("ldkc,ilad->akic", eris_ovov, t2)`
+void contract_SparseTensor4d_0113_wrapper(
+    Eigen::Ref<Eigen::VectorXd> &ovov_vec, SparseTensor4d &T,
+    Eigen::Ref<Eigen::VectorXd> &output_vec) {
+  const size_t no = T.dimension(0);
+  const size_t nv = T.dimension(2);
+  TMap4d ovov(ovov_vec.data(), no, nv, no, nv);
+  TMap4d output(output_vec.data(), nv, no, no, nv);
+  const size_t sp_size = T.size();
+
+#pragma omp parallel for schedule(dynamic) collapse(2)
+  for (size_t a = 0; a < nv; a++) {
+    for (size_t i = 0; i < no; i++) {
+      // Loop over sparse indices
+      for (size_t s = 0; s < sp_size; s++) {
+        std::array<size_t, 4> idx;
+        double value;
+        T.get_element(s, idx, value);
+        if (idx[2] == a && idx[0] == i) {
+          size_t l = idx[1], d = idx[3];
+          for (size_t k = 0; k < no; k++) {
+            for (size_t c = 0; c < nv; c++) {
+              output(a, k, i, c) += ovov(l, d, k, c) * value;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 // O^3V^3 `Wakci -= 0.5*lib.einsum('lckd,ilda->akci', eris_ovov, t2)`
 void contract_SparseTensor4d_0312_wrapper(
-    Eigen::Ref<Eigen::VectorXd>& ovov_vec, SparseTensor4d& T,
-    Eigen::Ref<Eigen::VectorXd>& output_vec) {
+    Eigen::Ref<Eigen::VectorXd> &ovov_vec, SparseTensor4d &T,
+    Eigen::Ref<Eigen::VectorXd> &output_vec) {
   const size_t no = T.dimension(0);
   const size_t nv = T.dimension(2);
   TMap4d ovov(ovov_vec.data(), no, nv, no, nv);
@@ -369,10 +401,11 @@ void contract_SparseTensor4d_0312_wrapper(
 }
 
 // Main way to interact with contraction kernels
-void contract_SparseTensor4d_wrapper(Eigen::Ref<Eigen::VectorXd>& W_vec,
-                                     SparseTensor4d& T,
-                                     Eigen::Ref<Eigen::VectorXd>& output_vec,
+void contract_SparseTensor4d_wrapper(Eigen::Ref<Eigen::VectorXd> &W_vec,
+                                     SparseTensor4d &T,
+                                     Eigen::Ref<Eigen::VectorXd> &output_vec,
                                      const std::string term) {
+  // std::cout << omp_get_max_threads() << std::endl;
   if (term == "0101") {
     // t2new += lib.einsum('klij,klab->ijab', Woooo, tau)
     contract_SparseTensor4d_0101_wrapper(W_vec, T, output_vec);
@@ -390,6 +423,8 @@ void contract_SparseTensor4d_wrapper(Eigen::Ref<Eigen::VectorXd>& W_vec,
     contract_SparseTensor4d_1323_wrapper(W_vec, T, output_vec);
   } else if (term == "0112") {
     contract_SparseTensor4d_0112_wrapper(W_vec, T, output_vec);
+  } else if (term == "0113") {
+    contract_SparseTensor4d_0113_wrapper(W_vec, T, output_vec);
   } else if (term == "0313") {
     contract_SparseTensor4d_0313_wrapper(W_vec, T, output_vec);
   } else if (term == "0312") {

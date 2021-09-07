@@ -57,18 +57,15 @@ def update_amps(
 
     assert isinstance(eris, ccsd._ChemistsERIs)
 
+    log = lib.logger.new_logger(cc)
+    m_keep = cc.fri_settings["m_keep"]
+    # TODO add input checks
+
     m_keep = cc.fri_settings["m_keep"]
     if m_keep > t2.size or m_keep == 0:
         raise ValueError(
             "Bad m_keep value! The following condition wasn't met 0 < m_keep <= t2.size"
         )
-
-    # Check FRI settings
-    for k, v in default_fri_settings.items():
-        if k not in cc.fri_settings.keys():
-            cc.fri_settings[k] = v
-
-    # TODO add input checks
 
     compressed_contractions = cc.fri_settings["compressed_contractions"]
     contraction_timings = {}
@@ -85,13 +82,16 @@ def update_amps(
     foo = fock[:nocc, :nocc].copy()
     fvv = fock[nocc:, nocc:].copy()
     t_update_amps = time.time()
-    log = lib.logger.new_logger(cc)
 
     #
     # Compression
     #
     t_compress = time.time()
     log.debug(f"M_KEEP = {m_keep} of {t2.size}")
+    log.debug(f"|t2|_1 = {np.linalg.norm(t2.ravel(), ord=1)}")
+    np.save("fricc_t2.npy", t2.ravel())
+    # exit(0)
+
     t2_sparse = SparseTensor4d(
         t2.ravel(),
         t2.shape,
@@ -151,10 +151,19 @@ def update_amps(
     Loo[np.diag_indices(nocc)] -= mo_e_o
     Lvv[np.diag_indices(nvir)] -= mo_e_v
 
-    Woooo = imd.cc_Woooo(t1, t2, eris)
-    Wvoov = imd.cc_Wvoov(t1, t2, eris)
-    Wvovo = imd.cc_Wvovo(t1, t2, eris)
-    Wvvvv = imd.cc_Wvvvv(t1, t2, eris)
+    if "O^4V^2X" in compressed_contractions:
+        Woooo = sparse_cc_Woooo(t1, t2_sparse, eris, contraction_timings)
+    else:
+        Woooo = imd.cc_Woooo(t1, t2, eris)
+
+    if "O^3V^3X" in compressed_contractions:
+        Wvoov = sparse_cc_Wvoov(t1, t2_sparse, eris, contraction_timings)
+        Wvovo = imd.cc_Wvovo(t1, t2, eris)
+
+    else:
+        Wvoov = imd.cc_Wvoov(t1, t2, eris)
+        Wvovo = imd.cc_Wvovo(t1, t2, eris)
+    Wvvvv = cc_Wvvvv(t1, t2, eris)
 
     # Splitting up some of the taus
     if "O^4V^2" in compressed_contractions:
@@ -182,7 +191,7 @@ def update_amps(
     t2new -= tmp + tmp.transpose(1, 0, 3, 2)
 
     # FRI-Compressed contraction
-    if "O^3V^3" in compressed_contractions:
+    if "O^3V^3X" in compressed_contractions:
         tmp = np.zeros_like(t2new)
         t_1302 = time.time()
         contract_DTSpT(Wvoov.ravel(), t2_sparse, tmp.ravel(), "1302")
@@ -230,18 +239,87 @@ def update_amps(
     t_update_amps = time.time() - t_update_amps
 
     log.debug(f"\nFRI: Compression Time {t_compress:.3f}")
-
     fri_time = copy.copy(t_compress)
     for k, v in contraction_timings.items():
         log.debug(f"FRI: Contraction {k} Time: {v:.3f} (s)")
         fri_time += v
     fri_time_frac = (fri_time) / t_update_amps
-
     log.debug(
         f"FRI: CCSD Total Time {t_update_amps:.3f} FRI-related fraction = {fri_time_frac:.3f}\n"
     )
 
     return t1new, t2new
+
+
+#
+# Constructing intermediates with sparse tensor contractions
+#
+
+
+def sparse_cc_Woooo(t1, t2_sparse, eris, contraction_timings):
+    eris_ovoo = np.asarray(eris.ovoo)
+    Wklij = lib.einsum("lcki,jc->klij", eris_ovoo, t1)
+    Wklij += lib.einsum("kclj,ic->klij", eris_ovoo, t1)
+
+    eris_ovov = np.asarray(eris.ovov)
+    t_1323 = time.time()
+    contract_DTSpT(eris_ovov.ravel(), t2_sparse, Wklij.ravel(), "1323")
+    contraction_timings["1323"] = time.time() - t_1323
+    # Wklij += lib.einsum("kcld,ijcd->klij", eris_ovov, t2)
+
+    Wklij += lib.einsum("kcld,ic,jd->klij", eris_ovov, t1, t1)
+    Wklij += np.asarray(eris.oooo).transpose(0, 2, 1, 3)
+    return Wklij
+
+
+def cc_Wvvvv(t1, t2, eris):
+    # Incore
+    eris_ovvv = np.asarray(eris.get_ovvv())
+    Wabcd = lib.einsum("kdac,kb->abcd", eris_ovvv, -t1)
+    Wabcd -= lib.einsum("kcbd,ka->abcd", eris_ovvv, t1)
+    Wabcd += np.asarray(imd._get_vvvv(eris)).transpose(0, 2, 1, 3)
+    return Wabcd
+
+
+def sparse_cc_Wvoov(t1, t2_sparse, eris, contraction_timings):
+    eris_ovvv = np.asarray(eris.get_ovvv())
+    eris_ovoo = np.asarray(eris.ovoo)
+    Wakic = lib.einsum("kcad,id->akic", eris_ovvv, t1, order="C")
+    Wakic -= lib.einsum("kcli,la->akic", eris_ovoo, t1)
+    Wakic += np.asarray(eris.ovvo).transpose(2, 0, 3, 1)
+
+    eris_ovov = np.asarray(eris.ovov)
+
+    # Wakic -= 0.5 * lib.einsum("ldkc,ilda->akic", eris_ovov, t2)
+    # Wakic -= 0.5 * lib.einsum("lckd,ilad->akic", eris_ovov, t2)
+    # Wakic += lib.einsum("ldkc,ilad->akic", eris_ovov, t2)
+
+    t_0112 = time.time()
+    contract_DTSpT(eris_ovov.ravel(), t2_sparse, Wakic.ravel(), "0112")
+    contraction_timings["0112"] = time.time() - t_0112
+
+    t_0313 = time.time()
+    contract_DTSpT(eris_ovov.ravel(), t2_sparse, Wakic.ravel(), "0313")
+    contraction_timings["0313"] = time.time() - t_0313
+
+    t_0113 = time.time()
+    contract_DTSpT(eris_ovov.ravel(), t2_sparse, Wakic.ravel(), "0113")
+    contraction_timings["0113"] = time.time() - t_0113
+
+    Wakic -= lib.einsum("ldkc,id,la->akic", eris_ovov, t1, t1)
+    return Wakic
+
+
+def cc_Wvovo(t1, t2, eris):
+    eris_ovvv = np.asarray(eris.get_ovvv())
+    eris_ovoo = np.asarray(eris.ovoo)
+    Wakci = lib.einsum("kdac,id->akci", eris_ovvv, t1)
+    Wakci -= lib.einsum("lcki,la->akci", eris_ovoo, t1)
+    Wakci += np.asarray(eris.oovv).transpose(2, 0, 3, 1)
+    eris_ovov = np.asarray(eris.ovov)
+    Wakci -= 0.5 * lib.einsum("lckd,ilda->akci", eris_ovov, t2)
+    Wakci -= lib.einsum("lckd,id,la->akci", eris_ovov, t1, t1)
+    return Wakci
 
 
 def kernel(
@@ -255,7 +333,7 @@ def kernel(
     verbose=None,
 ):
     # print("MAX_CYCLE=", mycc.max_cycle, max_cycle)
-    max_cycle = mycc.max_cycle  # Hack to force pyscf to respect max_cycles
+    # max_cycle = mycc.max_cycle  # Hack to force pyscf to respect max_cycles
 
     log = logger.new_logger(mycc, verbose)
     if eris is None:
@@ -287,14 +365,17 @@ def kernel(
         tmpvec -= mycc.amplitudes_to_vector(t1, t2)
         normt = numpy.linalg.norm(tmpvec)
         tmpvec = None
-        if mycc.iterative_damping < 1.0:
-            alpha = mycc.iterative_damping
-            t1new = (1 - alpha) * t1 + alpha * t1new
-            t2new *= alpha
-            t2new += (1 - alpha) * t2
+        # TODO remove commented sections
+        # Skip damping
+        # if mycc.iterative_damping < 1.0:
+        #     alpha = mycc.iterative_damping
+        #     t1new = (1 - alpha) * t1 + alpha * t1new
+        #     t2new *= alpha
+        #     t2new += (1 - alpha) * t2
         t1, t2 = t1new, t2new
         t1new = t2new = None
-        t1, t2 = mycc.run_diis(t1, t2, istep, normt, eccsd - eold, adiis)
+        # Skip DIIS
+        # t1, t2 = mycc.run_diis(t1, t2, istep, normt, eccsd - eold, adiis)
         eold, eccsd = eccsd, mycc.energy(t1, t2, eris)
 
         # Save old energies
@@ -313,6 +394,63 @@ def kernel(
             break
     log.timer("CCSD", *cput0)
     return conv, eccsd, t1, t2
+
+
+#
+# FRI-CCSD class
+#
+class FRICCSD(ccsd.CCSD):
+    def __init__(
+        self,
+        mf,
+        frozen=None,
+        mo_coeff=None,
+        mo_occ=None,
+        fri_settings=default_fri_settings,
+    ):
+        mycc = super().__init__(mf, frozen=None, mo_coeff=None, mo_occ=None)
+        self.fri_settings = fri_settings
+
+        log = lib.logger.new_logger(self)
+
+        # Check FRI settings
+        for k, v in default_fri_settings.items():
+            if k not in self.fri_settings.keys():
+                log.debug(f"FRI: Setting {k} to {v}")
+                fri_settings[k] = v
+
+        return mycc
+
+    def ccsd(self, t1=None, t2=None, eris=None):
+        assert self.mo_coeff is not None
+        assert self.mo_occ is not None
+
+        if self.verbose >= logger.WARN:
+            self.check_sanity()
+        self.dump_flags()
+
+        if eris is None:
+            eris = self.ao2mo(self.mo_coeff)
+
+        self.e_hf = getattr(eris, "e_hf", None)
+        if self.e_hf is None:
+            self.e_hf = self._scf.e_tot
+
+        self.converged, self.e_corr, self.t1, self.t2 = kernel(
+            self,
+            eris,
+            t1,
+            t2,
+            max_cycle=self.max_cycle,
+            tol=self.conv_tol,
+            tolnormt=self.conv_tol_normt,
+            verbose=self.verbose,
+        )
+        self._finalize()
+        return self.e_corr, self.t1, self.t2
+
+    def update_amps(self, t1, t2, eris):
+        return update_amps(self, t1, t2, eris)
 
 
 #

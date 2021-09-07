@@ -390,7 +390,7 @@ std::vector<double> make_probability_vector(const std::vector<double>& x,
       std::cerr << "i = " << i << " abs(x[i]) = " << abs(x[i])
                 << " remaining_norm = " << remaining_norm
                 << " n_sample = " << n_sample << std::endl;
-      // exit(EXIT_FAILURE);
+      exit(EXIT_FAILURE);
     }
   }
 
@@ -400,7 +400,7 @@ std::vector<double> make_probability_vector(const std::vector<double>& x,
 std::pair<std::vector<size_t>, double> get_d_largest(
     const std::vector<double>& x, const size_t n_sample) {
   double remaining_norm = one_norm(x);
-  // std::cout << remaining_norm << std::endl;
+  std::cout << "FRI-C++: 1-NORM OF X " << remaining_norm << std::endl;
   std::vector<size_t> D;
   D.reserve(n_sample);
 
@@ -416,6 +416,11 @@ std::pair<std::vector<size_t>, double> get_d_largest(
     } else {
       break;
     }
+  }
+
+  for (int i = 0; i < 10; i++) {
+    std::cout << i << " th largest element with value " << x[sort_idx[i]]
+              << std::endl;
   }
 
   // if (remaining_norm < 1e-12) {
@@ -493,18 +498,15 @@ std::pair<std::vector<size_t>, std::vector<double>> fri_compression(
   // Timing summary
   auto t_total = get_timing(_t_total);
   if (verbose) {
+    // clang-format off
     printf("Subsection    Fraction of Total    Total Time\n");
     printf("==========    =================    ==========\n");
-    printf("Sorting       %6.4f               %6.4f (s)\n",
-           t_get_d_largest / t_total, t_get_d_largest);
-    printf("P vector      %6.4f               %6.4f (s)\n",
-           t_p_vector / t_total, t_p_vector);
-    printf("Sampling      %6.4f               %6.4f (s)\n", t_sample / t_total,
-           t_sample);
-    printf("Wrap up       %6.4f               %6.4f (s)\n", t_wrap_up / t_total,
-           t_wrap_up);
-    printf("Total         %6.4f               %6.4f (s)\n", t_total / t_total,
-           t_total);
+    printf("Sorting       %6.4f               %6.4f (s)\n", t_get_d_largest / t_total, t_get_d_largest);
+    printf("P vector      %6.4f               %6.4f (s)\n", t_p_vector / t_total, t_p_vector);
+    printf("Sampling      %6.4f               %6.4f (s)\n", t_sample / t_total, t_sample);
+    printf("Wrap up       %6.4f               %6.4f (s)\n", t_wrap_up / t_total, t_wrap_up);
+    printf("Total         %6.4f               %6.4f (s)\n", t_total / t_total, t_total);
+    // clang-format on
   }
 
   return std::make_pair(compressed_idx, compressed_vals);

@@ -3,30 +3,29 @@ from pyscf import gto, scf, cc
 from pyscf.cc import ccsd
 import fricc
 
-ethane = """H      1.1851     -0.0039      0.9875
-C      0.7516     -0.0225     -0.0209
-H      1.1669      0.8330     -0.5693
-H      1.1155     -0.9329     -0.5145
-C     -0.7516      0.0225      0.0209
-H     -1.1669     -0.8334      0.5687
-H     -1.1157      0.9326      0.5151
-H     -1.1850      0.0044     -0.9875"""
 
-benzene = """  H      1.2194     -0.1652      2.1600
-  C      0.6825     -0.0924      1.2087
-  C     -0.7075     -0.0352      1.1973
-  H     -1.2644     -0.0630      2.1393
-  C     -1.3898      0.0572     -0.0114
-  H     -2.4836      0.1021     -0.0204
-  C     -0.6824      0.0925     -1.2088
-  H     -1.2194      0.1652     -2.1599
-  C      0.7075      0.0352     -1.1973
-  H      1.2641      0.0628     -2.1395
-  C      1.3899     -0.0572      0.0114
-  H      2.4836     -0.1022      0.0205"""
+pentane = """C          1.07644        0.16055       -0.12068
+C          2.59276        0.16199       -0.00016
+C          3.08852       -1.00227        0.85812
+C          4.61180       -0.99654        0.97485
+C          5.10826       -2.15033        1.83143
+H          0.74503        1.00196       -0.73569
+H          0.60562        0.25114        0.86269
+H          0.72214       -0.76329       -0.58840
+H          2.91753        1.11305        0.43862
+H          3.03329        0.10015       -1.00255
+H          2.75629       -1.94991        0.41784
+H          2.64207       -0.93655        1.85776
+H          4.94874       -0.05141        1.41564
+H          5.06238       -1.06929       -0.02136
+H          4.70175       -2.08942        2.84660
+H          6.20095       -2.12814        1.90186
+H          4.81547       -3.11370        1.40130"""
+# Pentane with ccpvdz fails with m_keep = 1e5
+# Pentane with ccpvdz fails with m_keep = 1e6
 
 
-mol = gto.M(atom=benzene, basis="sto3g", verbose=4)
+mol = gto.M(atom=pentane, basis="ccpvdz", verbose=5)
 
 nocc = mol.nelec[0]
 nvirt = mol.nao_nr() - nocc
@@ -41,19 +40,13 @@ t_ccsd = time.time()
 mycc2.kernel()
 t_ccsd = time.time() - t_ccsd
 
-# User some custom functions instead of the default PySCF ones
-ccsd.CCSD.update_amps = fricc.update_amps
-# ccsd.CCSD.kernel = fricc.kernel
-
 fri_settings = {
-    "m_keep": 99225,
+    "m_keep": 1e4,
     "compression": "fri",
     "sampling_method": "systematic",
-    "verbose": True if mol.verbose >= 5 else False,
+    "compressed_contractions": ["O^2V^4"],
 }
-mycc = cc.CCSD(mf)
-mycc.diis_start_cycle = mycc.max_cycle + 1
-mycc.fri_settings = fri_settings
+mycc = fricc.FRICCSD(mf, fri_settings=fri_settings)
 mycc.max_cycle = 20
 
 t_fricc = time.time()

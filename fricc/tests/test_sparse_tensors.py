@@ -67,8 +67,8 @@ def test_0101_contraction(no, nv, frac):
     "no,nv,frac",
     [
         (4, 8, 0.1),
-        # (5, 10, 0.01),
-        # (10, 20, 0.001),
+        (5, 10, 0.01),
+        (10, 20, 0.001),
     ],
 )
 def test_2323_contraction(no, nv, frac):
@@ -255,6 +255,33 @@ def test_0112_contraction(no, nv, frac):
     Wakic_np = -0.5 * np.einsum("ldkc,ilda->akic", ovov, t2, order="C")
     Wakic = np.zeros(Wakic_np.shape, order="C")
     contract_DTSpT(ovov.ravel(), t2_compressed, Wakic.ravel(), "0112")
+
+    npt.assert_almost_equal(Wakic, Wakic_np)
+
+
+@pytest.mark.parametrize("no,nv,frac", [(4, 8, 0.1), (5, 10, 0.01), (10, 20, 0.001)])
+def test_0113_contraction(no, nv, frac):
+    t2 = np.ascontiguousarray(np.random.rand(no, no, nv, nv))
+    ovov = np.ascontiguousarray(np.random.rand(no, nv, no, nv))
+
+    m = int(t2.size * frac)
+
+    # Keep the tests small
+    if m > 200:
+        print(f"M={m}")
+        raise ValueError("M >= 1000, choose a smaller matrix or a smaller fraction.")
+
+    # Compress by getting the largest m elements
+    t2_compressed = SparseTensor4d(t2.ravel(), t2.shape, m, "largest")
+
+    # Zero out the elements of the original t2 array
+    idx = np.unravel_index(np.argsort(t2, axis=None), t2.shape)
+    for i in range(t2.size - m):
+        t2[idx[0][i], idx[1][i], idx[2][i], idx[3][i]] = 0
+
+    Wakic_np = np.einsum("ldkc,ilad->akic", ovov, t2, order="C")
+    Wakic = np.zeros(Wakic_np.shape, order="C")
+    contract_DTSpT(ovov.ravel(), t2_compressed, Wakic.ravel(), "0113")
 
     npt.assert_almost_equal(Wakic, Wakic_np)
 
