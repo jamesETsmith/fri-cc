@@ -88,7 +88,7 @@ def update_amps(
     #
     t_compress = time.time()
     log.debug(f"M_KEEP = {m_keep} of {t2.size}")
-    log.debug(f"|t2|_1 = {np.linalg.norm(t2.ravel(), ord=1)}")
+    log.warn(f"|t2|_1 = {np.linalg.norm(t2.ravel(), ord=1)}")
     np.save("fricc_t2.npy", t2.ravel())
     # exit(0)
 
@@ -179,11 +179,20 @@ def update_amps(
     # ORIGINAL: t2new += lib.einsum("abcd,ijcd->ijab", Wvvvv, tau)
     t2new += lib.einsum("abcd,ia,jb->ijab", Wvvvv, t1, t1)
     if "O^2V^4" in compressed_contractions:
+        log.warn(f"|t2_new|_2 = {np.linalg.norm(t2new.ravel(), ord=1)}")
+        # print(hex(id(t2new.data)))
         t_2323 = time.time()
-        contract_DTSpT(Wvvvv.ravel(), t2_sparse, t2new.ravel(), "2323")
+        t2new = t2new.ravel()
+        contract_DTSpT(Wvvvv.ravel(), t2_sparse, t2new, "2323")
         contraction_timings["2323"] = time.time() - t_2323
+
+        log.warn(f"|t2_new|_3 = {np.linalg.norm(t2new.ravel(), ord=1)}")
+        t2new = t2new.reshape(nocc, nocc, nvir, nvir)
     else:
+        log.warn(f"|t2_new|_2 = {np.linalg.norm(t2new.ravel(), ord=1)}")
+
         t2new += lib.einsum("abcd,ijcd->ijab", Wvvvv, t2)
+        log.warn(f"|t2_new|_3 = {np.linalg.norm(t2new.ravel(), ord=1)}")
 
     tmp = lib.einsum("ac,ijcb->ijab", Lvv, t2)
     t2new += tmp + tmp.transpose(1, 0, 3, 2)

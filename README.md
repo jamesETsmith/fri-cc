@@ -29,7 +29,14 @@
 
 
 ### From Source
+```bash
+CXX=<your desired c++ compiler> cmake -B build
+make install -j
+cd ..
+python -m pip install -e .
+```
 
+For `cmake<3.14`
 ```bash
 mkdir build && cd build
 CXX=<your desired c++ compiler> cmake ..

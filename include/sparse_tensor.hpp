@@ -117,8 +117,8 @@ class SparseTensor4d {
 void contract_SparseTensor4d_2323_wrapper(TMap4d& W, SparseTensor4d& T,
                                           TMap4d& output);
 
-void contract_SparseTensor4d_wrapper(Eigen::Ref<Eigen::VectorXd>& W_vec,
+void contract_SparseTensor4d_wrapper(Eigen::Ref<Eigen::VectorXd> W_vec,
                                      SparseTensor4d& T,
-                                     Eigen::Ref<Eigen::VectorXd>& output_vec,
+                                     Eigen::Ref<Eigen::VectorXd> output_vec,
                                      const std::string term);
 #endif

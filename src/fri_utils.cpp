@@ -1,5 +1,9 @@
 #include <omp.h>
 
+// #include <oneapi/dpl/algorithm>
+// #include <oneapi/dpl/execution>
+
+// algo has to come before execution
 #include <algorithm>
 #include <cstdlib>
 #include <execution>
@@ -12,6 +16,12 @@
 //
 // Sorting routines
 //
+
+auto execution_par = std::execution::par;
+auto execution_par_unseq = std::execution::par;
+
+// using execution_par = std::execution::par;
+// using execution_par_unseq = oneapi::dpl::execution::par_unseq;
 
 //
 // Partially argsort an array using a special paired datatype to reduce jumping
@@ -29,8 +39,8 @@ std::vector<size_t> partial_argsort_paired(const std::vector<double>& array,
 
   // auto t_psort = std::chrono::steady_clock::now();
 
-  std::partial_sort(std::execution::par, pairs_full.begin(),
-                    pairs_full.begin() + m, pairs_full.end(),
+  std::partial_sort(execution_par, pairs_full.begin(), pairs_full.begin() + m,
+                    pairs_full.end(),
                     [](const valuePair& left, const valuePair& right) -> bool {
                       return left.value > right.value;
                     });
@@ -60,7 +70,7 @@ std::vector<size_t> partial_argsort(const Eigen::Ref<Eigen::VectorXd>& array,
   }
 
   std::partial_sort_copy(
-      std::execution::par, indices_full.begin(), indices_full.end(),
+      execution_par, indices_full.begin(), indices_full.end(),
       sorted_idx.begin(), sorted_idx.end(),
       [&array](const size_t& left, const size_t& right) -> bool {
         // sort indices according to corresponding array element in
@@ -78,7 +88,7 @@ std::vector<size_t> partial_argsort(const Eigen::Ref<Eigen::VectorXd>& array,
 std::vector<double> my_partial_sort(Eigen::Ref<Eigen::VectorXd>& v,
                                     const size_t m) {
   std::vector<double> sorted(m);
-  std::partial_sort_copy(std::execution::par_unseq, v.begin(), v.end(),
+  std::partial_sort_copy(execution_par_unseq, v.begin(), v.end(),
                          sorted.begin(), sorted.end());
   return sorted;
 }
@@ -400,7 +410,7 @@ std::vector<double> make_probability_vector(const std::vector<double>& x,
 std::pair<std::vector<size_t>, double> get_d_largest(
     const std::vector<double>& x, const size_t n_sample) {
   double remaining_norm = one_norm(x);
-  std::cout << "FRI-C++: 1-NORM OF X " << remaining_norm << std::endl;
+  // std::cout << "FRI-C++: 1-NORM OF X (t2) " << remaining_norm << std::endl;
   std::vector<size_t> D;
   D.reserve(n_sample);
 
@@ -418,10 +428,10 @@ std::pair<std::vector<size_t>, double> get_d_largest(
     }
   }
 
-  for (int i = 0; i < 10; i++) {
-    std::cout << i << " th largest element with value " << x[sort_idx[i]]
-              << std::endl;
-  }
+  // for (int i = 0; i < 10; i++) {
+  //   std::cout << i << " th largest element with value " << x[sort_idx[i]]
+  //             << std::endl;
+  // }
 
   // if (remaining_norm < 1e-12) {
   //   std::cout << "REMAINING NORM IS VERY SMALL " << remaining_norm <<
@@ -457,7 +467,7 @@ std::pair<std::vector<size_t>, std::vector<double>> fri_compression(
   auto _t_get_d_largest = std::chrono::steady_clock::now();
   auto [D, remaining_norm] = get_d_largest(x, n_sample);
   auto t_get_d_largest = get_timing(_t_get_d_largest);
-  std::cout << "Size of D " << D.size() << std::endl;
+  // std::cout << "Size of D " << D.size() << std::endl;
 
   // Calculate a vector of probabilities for sampling each element
   // Time: O(N)

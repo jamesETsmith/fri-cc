@@ -25,7 +25,7 @@ H          4.81547       -3.11370        1.40130"""
 # Pentane with ccpvdz fails with m_keep = 1e6
 
 
-mol = gto.M(atom=pentane, basis="ccpvdz", verbose=5)
+mol = gto.M(atom=pentane, basis="ccpvdz", verbose=4)
 
 nocc = mol.nelec[0]
 nvirt = mol.nao_nr() - nocc
@@ -35,16 +35,17 @@ print(f"|t2| = {nocc**2 * nvirt**2}")
 mf = scf.RHF(mol).run()
 
 
-mycc2 = cc.CCSD(mf)
-t_ccsd = time.time()
-mycc2.kernel()
-t_ccsd = time.time() - t_ccsd
+# mycc2 = cc.CCSD(mf)
+# t_ccsd = time.time()
+# mycc2.kernel()
+# t_ccsd = time.time() - t_ccsd
 
 fri_settings = {
     "m_keep": 1e4,
     "compression": "fri",
     "sampling_method": "systematic",
     "compressed_contractions": ["O^2V^4"],
+    # "compressed_contractions": [],
 }
 mycc = fricc.FRICCSD(mf, fri_settings=fri_settings)
 mycc.max_cycle = 20
