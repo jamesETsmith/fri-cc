@@ -16,3 +16,4 @@ slurm.out
 taco_test
 scratch
 _data_for_meetings
+.npy

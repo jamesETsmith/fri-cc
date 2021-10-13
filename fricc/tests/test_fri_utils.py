@@ -89,9 +89,9 @@ if __name__ == "__main__":
     n_iter = 10000
 
     # Choosing the vector we want to compress
-    # x = np.random.rand(vec_size) + np.random.rand(vec_size) * -1.0
+    x = np.random.rand(vec_size) + np.random.rand(vec_size) * -1.0
     # x = np.random.rand(vec_size // 4, 2, 2).ravel()
-    x = np.random.rand(vec_size) * np.power(np.logspace(1, -10, num=vec_size), 1)
+    # x = np.random.rand(vec_size) * np.power(np.logspace(1, -10, num=vec_size), 1)
     # x = np.ones(vec_size)
     # print(x)
     # exit(0)
