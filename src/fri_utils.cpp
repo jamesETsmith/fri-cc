@@ -1,8 +1,5 @@
 #include <omp.h>
 
-// #include <oneapi/dpl/algorithm>
-// #include <oneapi/dpl/execution>
-
 // algo has to come before execution
 #include <algorithm>
 #include <cstdlib>
@@ -11,14 +8,14 @@
 #include <iomanip>
 #include <numeric>
 
-#include "tbb/parallel_sort.h"
+// #include "tbb/parallel_sort.h"
 
 //
 // Sorting routines
 //
 
-auto execution_par = std::execution::par;
-auto execution_par_unseq = std::execution::par;
+// auto execution_par = std::execution::par;
+// auto execution_par_unseq = std::execution::par;
 
 // using execution_par = std::execution::par;
 // using execution_par_unseq = oneapi::dpl::execution::par_unseq;
@@ -39,7 +36,7 @@ std::vector<size_t> partial_argsort_paired(const std::vector<double>& array,
 
   // auto t_psort = std::chrono::steady_clock::now();
 
-  std::partial_sort(execution_par, pairs_full.begin(), pairs_full.begin() + m,
+  std::partial_sort(pairs_full.begin(), pairs_full.begin() + m,
                     pairs_full.end(),
                     [](const valuePair& left, const valuePair& right) -> bool {
                       return left.value > right.value;
@@ -70,8 +67,8 @@ std::vector<size_t> partial_argsort(const Eigen::Ref<Eigen::VectorXd>& array,
   }
 
   std::partial_sort_copy(
-      execution_par, indices_full.begin(), indices_full.end(),
-      sorted_idx.begin(), sorted_idx.end(),
+      indices_full.begin(), indices_full.end(), sorted_idx.begin(),
+      sorted_idx.end(),
       [&array](const size_t& left, const size_t& right) -> bool {
         // sort indices according to corresponding array element in
         // DESCENDING ORDER
@@ -88,8 +85,7 @@ std::vector<size_t> partial_argsort(const Eigen::Ref<Eigen::VectorXd>& array,
 std::vector<double> my_partial_sort(Eigen::Ref<Eigen::VectorXd>& v,
                                     const size_t m) {
   std::vector<double> sorted(m);
-  std::partial_sort_copy(execution_par_unseq, v.begin(), v.end(),
-                         sorted.begin(), sorted.end());
+  std::partial_sort_copy(v.begin(), v.end(), sorted.begin(), sorted.end());
   return sorted;
 }
 

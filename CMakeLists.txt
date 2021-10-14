@@ -54,8 +54,9 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 find_package(OpenMP REQUIRED)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
-find_package(TBB REQUIRED)
-message(STATUS "Intel TBB Found? ${TBB_tbb_FOUND}")
+# set(TBB_DIR ${CMAKE_SOURCE_DIR}/external/oneTBB/install/lib64/cmake/TBB/)
+# find_package(TBB)
+# message(STATUS "Intel TBB Found? ${TBB_tbb_FOUND}")
 
 # Eigen
 include_directories(${CMAKE_SOURCE_DIR}/external/eigen)
@@ -81,7 +82,7 @@ add_library(fricc SHARED ${FRICC_SOURCES})
 
 # Use BLAS/LAPACKE as Eigen backend
 target_compile_definitions(fricc PRIVATE -DEIGEN_USE_BLAS -DEIGEN_USE_LAPACKE)
-target_link_libraries(fricc PRIVATE BLAS::BLAS LAPACK::LAPACK OpenMP::OpenMP_CXX TBB::tbb)
+target_link_libraries(fricc PRIVATE BLAS::BLAS LAPACK::LAPACK OpenMP::OpenMP_CXX)
 
 
 # Installation location

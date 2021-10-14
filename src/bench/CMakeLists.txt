@@ -19,6 +19,5 @@ foreach(BENCH_SRC ${BENCH_FILES})
     BLAS::BLAS 
     LAPACK::LAPACK 
     OpenMP::OpenMP_CXX
-    TBB::tbb
   )
 endforeach()
