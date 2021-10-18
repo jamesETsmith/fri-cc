@@ -16,4 +16,6 @@ slurm.out
 taco_test
 scratch
 _data_for_meetings
-.npy
+*.npy
+*.png
+env_fricc.sh

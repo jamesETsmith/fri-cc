@@ -87,7 +87,7 @@ def update_amps(
     # Compression
     #
     log.debug(f"M_KEEP = {m_keep} of {t2.size}")
-    log.warn(f"|t2|_1 = {np.linalg.norm(t2.ravel(), ord=1)}")
+    # log.warn(f"|t2|_1 = {np.linalg.norm(t2.ravel(), ord=1)}")
     # np.save("fricc_t2.npy", t2.ravel())
     # exit(0)
 
@@ -151,14 +151,14 @@ def update_amps(
     Loo[np.diag_indices(nocc)] -= mo_e_o
     Lvv[np.diag_indices(nvir)] -= mo_e_v
 
-    if "O^4V^2X" in compressed_contractions:
+    if "O^4V^2" in compressed_contractions:
         Woooo = sparse_cc_Woooo(t1, t2_sparse, eris, contraction_timings)
     else:
         Woooo = imd.cc_Woooo(t1, t2, eris)
 
-    if "O^3V^3X" in compressed_contractions:
+    if "O^3V^3" in compressed_contractions:
         Wvoov = sparse_cc_Wvoov(t1, t2_sparse, eris, contraction_timings)
-        Wvovo = imd.cc_Wvovo(t1, t2, eris)
+        Wvovo = sparse_cc_Wvovo(t1, t2_sparse, eris, contraction_timings)
 
     else:
         Wvoov = imd.cc_Wvoov(t1, t2, eris)
@@ -169,30 +169,27 @@ def update_amps(
     if "O^4V^2" in compressed_contractions:
         t2new += lib.einsum("klij,ka,lb->ijab", Woooo, t1, t1)
         t_0101 = time.time()
-        contract_DTSpT(Woooo.ravel(), t2_sparse, t2new.ravel(), "0101")
+        contract_DTSpT(Woooo, t2_sparse, t2new, "0101")
         contraction_timings["0101"] = time.time() - t_0101
     else:
         tau = t2 + np.einsum("ia,jb->ijab", t1, t1)
         t2new += lib.einsum("klij,klab->ijab", Woooo, tau)
 
     # FRI-Compressed contraction
-    # ORIGINAL: t2new += lib.einsum("abcd,ijcd->ijab", Wvvvv, tau)
     t2new += lib.einsum("abcd,ia,jb->ijab", Wvvvv, t1, t1)
     if "O^2V^4" in compressed_contractions:
-        log.warn(f"|t2_new|_2 = {np.linalg.norm(t2new.ravel(), ord=1)}")
-        # print(hex(id(t2new.data)))
+        # log.warn(f"|t2_new|_2 = {np.linalg.norm(t2new.ravel(), ord=1)}")
+
         t_2323 = time.time()
-        t2new = t2new.ravel()
-        contract_DTSpT(Wvvvv.ravel(), t2_sparse, t2new, "2323")
+        contract_DTSpT(Wvvvv, t2_sparse, t2new, "2323")
         contraction_timings["2323"] = time.time() - t_2323
 
-        log.warn(f"|t2_new|_3 = {np.linalg.norm(t2new.ravel(), ord=1)}")
-        t2new = t2new.reshape(nocc, nocc, nvir, nvir)
+        # log.warn(f"|t2_new|_3 = {np.linalg.norm(t2new.ravel(), ord=1)}")
+        # t2new = t2new.reshape(nocc, nocc, nvir, nvir)
     else:
-        log.warn(f"|t2_new|_2 = {np.linalg.norm(t2new.ravel(), ord=1)}")
-
+        # log.warn(f"|t2_new|_2 = {np.linalg.norm(t2new.ravel(), ord=1)}")
         t2new += lib.einsum("abcd,ijcd->ijab", Wvvvv, t2)
-        log.warn(f"|t2_new|_3 = {np.linalg.norm(t2new.ravel(), ord=1)}")
+        # log.warn(f"|t2_new|_3 = {np.linalg.norm(t2new.ravel(), ord=1)}")
 
     tmp = lib.einsum("ac,ijcb->ijab", Lvv, t2)
     t2new += tmp + tmp.transpose(1, 0, 3, 2)
@@ -200,28 +197,28 @@ def update_amps(
     t2new -= tmp + tmp.transpose(1, 0, 3, 2)
 
     # FRI-Compressed contraction
-    if "O^3V^3X" in compressed_contractions:
+    if "O^3V^3" in compressed_contractions:
         tmp = np.zeros_like(t2new)
         t_1302 = time.time()
-        contract_DTSpT(Wvoov.ravel(), t2_sparse, tmp.ravel(), "1302")
+        contract_DTSpT(Wvoov, t2_sparse, tmp, "1302")
         contraction_timings["1302"] = time.time() - t_1302
 
         t_1202 = time.time()
-        contract_DTSpT(Wvovo.ravel(), t2_sparse, tmp.ravel(), "1202")
+        contract_DTSpT(Wvovo, t2_sparse, tmp, "1202")
         contraction_timings["1202"] = time.time() - t_1202
 
         t2new += tmp + tmp.transpose(1, 0, 3, 2)
 
         tmp = np.zeros_like(t2new)
         t_1303 = time.time()
-        contract_DTSpT(Wvoov.ravel(), t2_sparse, tmp.ravel(), "1303")
+        contract_DTSpT(Wvoov, t2_sparse, tmp, "1303")
         contraction_timings["1303"] = time.time() - t_1303
 
         t2new -= tmp + tmp.transpose(1, 0, 3, 2)
 
         tmp = np.zeros_like(t2new)
         t_1203 = time.time()
-        contract_DTSpT(Wvovo.ravel(), t2_sparse, tmp.ravel(), "1203")
+        contract_DTSpT(Wvovo, t2_sparse, tmp, "1203")
         contraction_timings["1203"] = time.time() - t_1203
         t2new -= tmp + tmp.transpose(1, 0, 3, 2)
 
@@ -272,7 +269,7 @@ def sparse_cc_Woooo(t1, t2_sparse, eris, contraction_timings):
 
     eris_ovov = np.asarray(eris.ovov)
     t_1323 = time.time()
-    contract_DTSpT(eris_ovov.ravel(), t2_sparse, Wklij.ravel(), "1323")
+    contract_DTSpT(eris_ovov, t2_sparse, Wklij, "1323")
     contraction_timings["1323"] = time.time() - t_1323
     # Wklij += lib.einsum("kcld,ijcd->klij", eris_ovov, t2)
 
@@ -304,29 +301,33 @@ def sparse_cc_Wvoov(t1, t2_sparse, eris, contraction_timings):
     # Wakic += lib.einsum("ldkc,ilad->akic", eris_ovov, t2)
 
     t_0112 = time.time()
-    contract_DTSpT(eris_ovov.ravel(), t2_sparse, Wakic.ravel(), "0112")
+    contract_DTSpT(eris_ovov, t2_sparse, Wakic, "0112")
     contraction_timings["0112"] = time.time() - t_0112
 
     t_0313 = time.time()
-    contract_DTSpT(eris_ovov.ravel(), t2_sparse, Wakic.ravel(), "0313")
+    contract_DTSpT(eris_ovov, t2_sparse, Wakic, "0313")
     contraction_timings["0313"] = time.time() - t_0313
 
     t_0113 = time.time()
-    contract_DTSpT(eris_ovov.ravel(), t2_sparse, Wakic.ravel(), "0113")
+    contract_DTSpT(eris_ovov, t2_sparse, Wakic, "0113")
     contraction_timings["0113"] = time.time() - t_0113
 
     Wakic -= lib.einsum("ldkc,id,la->akic", eris_ovov, t1, t1)
     return Wakic
 
 
-def cc_Wvovo(t1, t2, eris):
+def sparse_cc_Wvovo(t1, t2_sparse, eris, contraction_timings):
     eris_ovvv = np.asarray(eris.get_ovvv())
     eris_ovoo = np.asarray(eris.ovoo)
     Wakci = lib.einsum("kdac,id->akci", eris_ovvv, t1)
     Wakci -= lib.einsum("lcki,la->akci", eris_ovoo, t1)
     Wakci += np.asarray(eris.oovv).transpose(2, 0, 3, 1)
+
     eris_ovov = np.asarray(eris.ovov)
-    Wakci -= 0.5 * lib.einsum("lckd,ilda->akci", eris_ovov, t2)
+    t_0312 = time.time()
+    contract_DTSpT(eris_ovov, t2_sparse, Wakci, "0312")
+    contraction_timings["0312"] = time.time() - t_0312
+
     Wakci -= lib.einsum("lckd,id,la->akci", eris_ovov, t1, t1)
     return Wakci
 

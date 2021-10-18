@@ -3,7 +3,6 @@
 // algo has to come before execution
 #include <algorithm>
 #include <cstdlib>
-#include <execution>
 #include <fri_utils.hpp>
 #include <iomanip>
 #include <numeric>

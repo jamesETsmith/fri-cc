@@ -71,8 +71,6 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 set(FRICC_SOURCES 
   src/fri_utils.cpp
-  src/rintermediates.cpp
-  src/rccsd.cpp
   src/sparse_tensor.cpp
 )
 

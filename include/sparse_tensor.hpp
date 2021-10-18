@@ -1,10 +1,13 @@
 #ifndef SPARSE_TENSOR_HPP
 #define SPARSE_TENSOR_HPP
+#include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
+
 #include <array>
 #include <fri_utils.hpp>
 #include <fricc.hpp>
 
-using VecXST = Eigen::Matrix<size_t, Eigen::Dynamic, 1>;
+namespace py = pybind11;
 
 // Tensor utilities
 template <int p>
@@ -109,16 +112,7 @@ class SparseTensor4d {
   void print() { std::cout << *this << std::endl; }
 };
 
-// void contract_SparseTensor4d(RowTensor4d& W, SparseTensor4d& T,
-//                              RowTensor4d& output, const std::string term);
-
-// void contract_SparseTensor4d_2323(RowTensor4d& W, SparseTensor4d& T,
-//                                   RowTensor4d& output);
-void contract_SparseTensor4d_2323_wrapper(TMap4d& W, SparseTensor4d& T,
-                                          TMap4d& output);
-
-void contract_SparseTensor4d_wrapper(Eigen::Ref<Eigen::VectorXd> W_vec,
-                                     SparseTensor4d& T,
-                                     Eigen::Ref<Eigen::VectorXd> output_vec,
+void contract_SparseTensor4d_wrapper(py::array_t<double> W, SparseTensor4d& T,
+                                     py::array_t<double> output,
                                      const std::string term);
 #endif

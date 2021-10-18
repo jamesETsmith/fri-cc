@@ -35,20 +35,20 @@ print(f"|t2| = {nocc**2 * nvirt**2}")
 mf = scf.RHF(mol).run()
 
 
-# mycc2 = cc.CCSD(mf)
-# t_ccsd = time.time()
-# mycc2.kernel()
-# t_ccsd = time.time() - t_ccsd
+mycc2 = cc.CCSD(mf)
+t_ccsd = time.time()
+mycc2.kernel()
+t_ccsd = time.time() - t_ccsd
 
 fri_settings = {
-    "m_keep": 1e4,
+    "m_keep": 5e4,
     "compression": "fri",
     "sampling_method": "systematic",
-    # "compressed_contractions": ["O^2V^4"],
+    "compressed_contractions": ["O^2V^4", "O^4V^2", "O^3V^3"],
     # "compressed_contractions": [],
 }
 mycc = fricc.FRICCSD(mf, fri_settings=fri_settings)
-mycc.max_cycle = 20
+mycc.max_cycle = 50
 
 t_fricc = time.time()
 mycc.kernel()

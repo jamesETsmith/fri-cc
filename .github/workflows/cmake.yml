@@ -24,7 +24,7 @@ jobs:
         submodules: true
         
     - name: Install software requirements
-      run: sudo apt-get install libblas-dev liblapack-dev libtbb-dev
+      run: sudo apt-get install libblas-dev liblapack-dev
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/build
@@ -45,11 +45,6 @@ jobs:
       working-directory: ${{github.workspace}}/build
       shell: bash
       run: make install
-
-    - name: C++ Tests
-      working-directory: ${{github.workspace}}/build
-      shell: bash
-      run: ctest -C $BUILD_TYPE
 
     - name: Python Install
       working-directory: ${{github.workspace}}

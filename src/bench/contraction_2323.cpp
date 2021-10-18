@@ -27,22 +27,22 @@ int main(int argc, char** argv) {
   std::cout << "|T_ijab| = " << t2_size << std::endl;
   std::cout << "|Wvvvv| = " << nvirt * nvirt * nvirt * nvirt << std::endl;
   std::cout << "|T_sparse| = " << n_sample << std::endl;
-
+  std::cout << "I'M BROKEN" << std::endl;
   // Populate data structures
-  std::vector<double> t2_old(t2_size);
-  Eigen::VectorXd Wvvvv =
-      Eigen::VectorXd::Random(nvirt * nvirt * nvirt * nvirt);
-  Eigen::VectorXd t2_new = Eigen::VectorXd::Zero(t2_size);
-  std::generate(t2_old.begin(), t2_old.end(),
-                [] { return (double)rand() / RAND_MAX; });
-  SparseTensor4d t2_compressed(t2_old, {nocc, nocc, nvirt, nvirt}, n_sample,
-                               "largest");
+  // std::vector<double> t2_old(t2_size);
+  // Eigen::VectorXd Wvvvv =
+  //     Eigen::VectorXd::Random(nvirt * nvirt * nvirt * nvirt);
+  // Eigen::VectorXd t2_new = Eigen::VectorXd::Zero(t2_size);
+  // std::generate(t2_old.begin(), t2_old.end(),
+  //               [] { return (double)rand() / RAND_MAX; });
+  // SparseTensor4d t2_compressed(t2_old, {nocc, nocc, nvirt, nvirt}, n_sample,
+  //                              "largest");
 
-  Eigen::Ref<Eigen::VectorXd> W_ref = Wvvvv;
-  Eigen::Ref<Eigen::VectorXd> t_ref = t2_new;
-  auto t_contract = std::chrono::steady_clock::now();
-  contract_SparseTensor4d_wrapper(W_ref, t2_compressed, t_ref, "2323");
-  log_timing("2323 contraction timing", t_contract);
+  // Eigen::Ref<Eigen::VectorXd> W_ref = Wvvvv;
+  // Eigen::Ref<Eigen::VectorXd> t_ref = t2_new;
+  // auto t_contract = std::chrono::steady_clock::now();
+  // contract_SparseTensor4d_wrapper(W_ref, t2_compressed, t_ref, "2323");
+  // log_timing("2323 contraction timing", t_contract);
 
   return 0;
 }
