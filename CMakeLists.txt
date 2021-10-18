@@ -63,7 +63,7 @@ include_directories(${CMAKE_SOURCE_DIR}/external/eigen)
 
 # Pybind11
 add_subdirectory(${CMAKE_SOURCE_DIR}/external/pybind11)
-include_directories(${CMAKE_SOURCE_DIR}/external/pybind11/include)
+# include_directories(${CMAKE_SOURCE_DIR}/external/pybind11/include)
 
 #
 # Libfricc
@@ -72,7 +72,6 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 set(FRICC_SOURCES 
   src/fri_utils.cpp
-  src/sparse_tensor.cpp
 )
 
 # The actual library
@@ -102,7 +101,7 @@ endif()
 #
 # Benchmark/Profiling Kernels
 #
-add_subdirectory(src/bench)
+# add_subdirectory(src/bench)
 
 #
 # Pybind11 Wrappers/Module
@@ -112,7 +111,7 @@ add_subdirectory(src/bench)
 set(CMAKE_INSTALL_RPATH ${CMAKE_SOURCE_DIR}/lib)
 
 # Build and link Python wrappers
-pybind11_add_module(py_rccsd ${CMAKE_SOURCE_DIR}/src/py_rccsd.cpp)
-target_link_libraries(py_rccsd  PRIVATE   fricc)
+pybind11_add_module(py_rccsd ${CMAKE_SOURCE_DIR}/src/py_rccsd.cpp src/sparse_tensor.cpp)
+target_link_libraries(py_rccsd  PRIVATE fricc OpenMP::OpenMP_CXX)
 
 install(TARGETS py_rccsd LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/fricc)
