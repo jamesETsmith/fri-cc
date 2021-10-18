@@ -29,7 +29,10 @@ jobs:
         python-version: '3.9'
         
     - name: Install software requirements
-      run: sudo apt-get install libblas-dev liblapack-dev
+      run: |
+        sudo apt-get install libblas-dev liblapack-dev
+        cd ${{github.workspace}}/external/pybind11
+        python -m pip install . --user
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/build
