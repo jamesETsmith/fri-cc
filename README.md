@@ -10,9 +10,6 @@
 ### Requirements
 - C++20 Compiler
 - cmake
-- BLAS and LAPACK
-- Intel TBB
-- Eigen (packaged with project)
 - pybind11 (packages with project)
 - Python >= 3.6
     - PySCF
@@ -20,19 +17,18 @@
 
 ### Tested Configurations
 
-| Compiler  | Eigen | pybind11 |  TBB   |      Success       |
-| :-------: | :---: | :------: | :----: | :----------------: |
-| clang++9  | 3.3.9 |  2.6.2   | 2020.1 | :heavy_check_mark: |
-| clang++10 | 3.3.9 |  2.6.2   | 2020.1 | :heavy_check_mark: |
-|   g++9    | 3.3.9 |  2.6.2   | 2020.1 | :heavy_check_mark: |
-|   g++10   | 3.3.9 |  2.6.2   | 2020.1 | :heavy_check_mark: |
+| Compiler  |      Success       |
+| :-------: | :----------------: |
+| clang++9  | :heavy_check_mark: |
+| clang++10 | :heavy_check_mark: |
+|   g++9    | :heavy_check_mark: |
+|   g++10   | :heavy_check_mark: |
 
 
 ### From Source
 ```bash
 CXX=<your desired c++ compiler> cmake -B build
-make install -j
-cd ..
+cmake --build build --parallel --target install
 python -m pip install -e .
 ```
 

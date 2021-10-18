@@ -63,6 +63,7 @@ include_directories(${CMAKE_SOURCE_DIR}/external/eigen)
 
 # Pybind11
 add_subdirectory(${CMAKE_SOURCE_DIR}/external/pybind11)
+include_directories(${CMAKE_SOURCE_DIR}/external/pybind11/include)
 
 #
 # Libfricc
