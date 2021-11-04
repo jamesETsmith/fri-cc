@@ -25,7 +25,7 @@ H          4.81547       -3.11370        1.40130"""
 # Pentane with ccpvdz fails with m_keep = 1e6
 
 
-mol = gto.M(atom=pentane, basis="ccpvdz", verbose=4)
+mol = gto.M(atom=pentane, basis="631g", verbose=4)
 
 nocc = mol.nelec[0]
 nvirt = mol.nao_nr() - nocc
@@ -41,10 +41,10 @@ mycc2.kernel()
 t_ccsd = time.time() - t_ccsd
 
 fri_settings = {
-    "m_keep": 5e4,
+    "m_keep": 1e4,
     "compression": "fri",
     "sampling_method": "systematic",
-    "compressed_contractions": ["O^2V^4", "O^4V^2", "O^3V^3"],
+    "compressed_contractions": ["O^2V^4"],
     # "compressed_contractions": [],
 }
 mycc = fricc.FRICCSD(mf, fri_settings=fri_settings)

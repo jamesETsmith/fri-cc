@@ -9,6 +9,7 @@ project(fricc LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17) 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For clang-tidy
 
 
 # Build type defaults to release
@@ -36,9 +37,8 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
   endif()
 endif()
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g -march=${ARCH} -Wno-narrowing")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -g -march=${ARCH} -Wno-narrowing")
+message(STATUS "Using the following C++ compiler flags\n\t${CMAKE_CXX_FLAGS_RELEASE}")
 
 #
 # Some RPATH settings (more later during install)
@@ -60,6 +60,9 @@ find_package(LAPACK REQUIRED)
 
 # Eigen
 include_directories(${CMAKE_SOURCE_DIR}/external/eigen)
+
+# Sorting Sandbox
+include_directories(${CMAKE_SOURCE_DIR}/external/sorting_sandbox/include)
 
 # Pybind11
 add_subdirectory(${CMAKE_SOURCE_DIR}/external/pybind11)

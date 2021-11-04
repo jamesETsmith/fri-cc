@@ -21,6 +21,8 @@ default_fri_settings = {
     "compressed_contractions": ["O^2V^4"],
 }
 
+ALLOWED_CONTRACTIONS = ["O^2V^4", "O^3V^3", "O^4V^2"]
+
 
 def update_amps(
     cc: ccsd.CCSD,
@@ -92,7 +94,17 @@ def update_amps(
     # exit(0)
 
     t_compress = time.time()
+    # TODO Fix ravel here it's copying for big arrays
     t2_sparse = SparseTensor4d(
+        t2.ravel(),
+        t2.shape,
+        int(m_keep),
+        cc.fri_settings["compression"],
+        cc.fri_settings["sampling_method"],
+        cc.fri_settings["verbose"],
+    )
+    if "O^3V^3" in compressed_contractions or "O^4V^2" in compressed_contractions:
+        t2_sparse_alt = SparseTensor4d(
         t2.ravel(),
         t2.shape,
         int(m_keep),
@@ -106,6 +118,7 @@ def update_amps(
     # Updating the Amplitudes
     #
 
+    # TODO sparsify
     Foo = imd.cc_Foo(t1, t2, eris)
     Fvv = imd.cc_Fvv(t1, t2, eris)
     Fov = imd.cc_Fov(t1, t2, eris)
@@ -124,14 +137,20 @@ def update_amps(
     t1new += fov.conj()
     t1new += 2 * np.einsum("kcai,kc->ia", eris.ovvo, t1)
     t1new += -np.einsum("kiac,kc->ia", eris.oovv, t1)
+
+    # TODO sparsify ? (O^2V^3)
     eris_ovvv = np.asarray(eris.get_ovvv())
     t1new += 2 * lib.einsum("kdac,ikcd->ia", eris_ovvv, t2)
     t1new += -lib.einsum("kcad,ikcd->ia", eris_ovvv, t2)
     t1new += 2 * lib.einsum("kdac,kd,ic->ia", eris_ovvv, t1, t1)
     t1new += -lib.einsum("kcad,kd,ic->ia", eris_ovvv, t1, t1)
+    
+    # TODO sparsify ? (O^3V^2)
     eris_ovoo = np.asarray(eris.ovoo, order="C")
     t1new += -2 * lib.einsum("lcki,klac->ia", eris_ovoo, t2)
     t1new += lib.einsum("kcli,klac->ia", eris_ovoo, t2)
+
+
     t1new += -2 * lib.einsum("lcki,lc,ka->ia", eris_ovoo, t1, t1)
     t1new += lib.einsum("kcli,lc,ka->ia", eris_ovoo, t1, t1)
 
@@ -152,18 +171,19 @@ def update_amps(
     Lvv[np.diag_indices(nvir)] -= mo_e_v
 
     if "O^4V^2" in compressed_contractions:
-        Woooo = sparse_cc_Woooo(t1, t2_sparse, eris, contraction_timings)
+        Woooo = sparse_cc_Woooo(t1, t2_sparse_alt, eris, contraction_timings)
     else:
         Woooo = imd.cc_Woooo(t1, t2, eris)
 
     if "O^3V^3" in compressed_contractions:
-        Wvoov = sparse_cc_Wvoov(t1, t2_sparse, eris, contraction_timings)
-        Wvovo = sparse_cc_Wvovo(t1, t2_sparse, eris, contraction_timings)
+        Wvoov = sparse_cc_Wvoov(t1, t2_sparse_alt, eris, contraction_timings)
+        Wvovo = sparse_cc_Wvovo(t1, t2_sparse_alt, eris, contraction_timings)
 
     else:
         Wvoov = imd.cc_Wvoov(t1, t2, eris)
         Wvovo = imd.cc_Wvovo(t1, t2, eris)
-    Wvvvv = cc_Wvvvv(t1, t2, eris)
+
+    Wvvvv = cc_Wvvvv(t1, t2, eris) # t2 isn't used in making this intermediate
 
     # Splitting up some of the taus
     if "O^4V^2" in compressed_contractions:
@@ -191,6 +211,7 @@ def update_amps(
         t2new += lib.einsum("abcd,ijcd->ijab", Wvvvv, t2)
         # log.warn(f"|t2_new|_3 = {np.linalg.norm(t2new.ravel(), ord=1)}")
 
+    # TODO sparsify? O^2V^3
     tmp = lib.einsum("ac,ijcb->ijab", Lvv, t2)
     t2new += tmp + tmp.transpose(1, 0, 3, 2)
     tmp = lib.einsum("ki,kjab->ijab", Loo, t2)
@@ -368,6 +389,7 @@ def kernel(
 
     # Create list of energies so we can access them easily later
     mycc.energies = []
+    print("HERE")
     conv = False
     for istep in range(max_cycle):
         t1new, t2new = mycc.update_amps(t1, t2, eris)
@@ -428,6 +450,11 @@ class FRICCSD(ccsd.CCSD):
             if k not in self.fri_settings.keys():
                 log.debug(f"FRI: Setting {k} to {v}")
                 fri_settings[k] = v
+
+        # Check contractions
+        for c in self.fri_settings["compressed_contractions"]:
+            if c not in ALLOWED_CONTRACTIONS:
+                raise ValueError(f"Contraction ({c}) is not supported!")
 
         return mycc
 

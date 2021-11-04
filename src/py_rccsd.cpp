@@ -14,8 +14,7 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 PYBIND11_MODULE(py_rccsd, m) {
-  m.def("partial_argsort", &partial_argsort, "");
-  m.def("partial_argsort_paired", &partial_argsort_paired, "");
+  m.def("argsort", &argsort, "");
   m.def("sample_pivotal", &sample_pivotal, "", "n_sample"_a,
         "probs"_a.noconvert());
   m.def("sample_systematic", &sample_systematic, "", "n_sample"_a,

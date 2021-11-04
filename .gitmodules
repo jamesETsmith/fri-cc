@@ -7,3 +7,6 @@
 [submodule "external/doctest"]
 	path = external/doctest
 	url = git@github.com:onqtam/doctest.git
+[submodule "external/sorting_sandbox"]
+	path = external/sorting_sandbox
+	url = git@github.com:jamesETsmith/sorting_sandbox.git

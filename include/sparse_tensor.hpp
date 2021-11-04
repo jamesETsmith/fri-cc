@@ -58,7 +58,7 @@ class SparseTensor4d {
     // Input Checking
     if (!compression.compare("largest")) {
       // Sort dense tensor
-      auto t_largest_idx = partial_argsort_paired(tensor_flat, m);
+      auto t_largest_idx = argsort(tensor_flat, m);
 
 // Put them into sparse tensor (in parallel)
 #pragma omp parallel for schedule(static)
