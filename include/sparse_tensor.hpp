@@ -13,7 +13,7 @@ namespace py = pybind11;
 template <int p>
 double p_norm(RowTensor4d& error) {
   double norm;
-#pragma omp parallel reduction(+ : norm)
+#pragma omp parallel for collapse(4) reduction(+ : norm)
   for (size_t i = 0; i < error.dimension(0); i++) {
     for (size_t j = 0; j < error.dimension(1); j++) {
       for (size_t a = 0; a < error.dimension(2); a++) {
@@ -52,6 +52,7 @@ class SparseTensor4d {
                  const std::string sampling_method = "pivotal",
                  const bool verbose = false)
       : dims(dims), nnz(m) {
+    auto _total = std::chrono::steady_clock::now();
     indices.resize(m);
     data.resize(m);
 
@@ -61,7 +62,7 @@ class SparseTensor4d {
       auto t_largest_idx = argsort(tensor_flat, m);
 
 // Put them into sparse tensor (in parallel)
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static, 16)
       for (size_t i = 0; i < m; i++) {
         const size_t idx = t_largest_idx[i];
         this->set_element(i, idx, tensor_flat[idx]);
@@ -71,13 +72,19 @@ class SparseTensor4d {
     } else if (!compression.compare("fri")) {
       std::vector<size_t> compressed_idx;
       std::vector<double> compressed_vals;
+      auto _t_compress = std::chrono::steady_clock::now();
       std::tie(compressed_idx, compressed_vals) =
           fri_compression(tensor_flat, m, sampling_method, verbose);
+      auto t_compress = get_timing(_t_compress);
+      std::cout << "t compress " << t_compress << std::endl;
 
-#pragma omp parallel for schedule(static)
+      auto _t_set = std::chrono::steady_clock::now();
+#pragma omp parallel for schedule(static, 16)
       for (size_t i = 0; i < m; i++) {
         this->set_element(i, compressed_idx[i], compressed_vals[i]);
       }
+      auto t_set = get_timing(_t_set);
+      std::cout << t_set << std::endl;
 
       // Bad compression method
     } else {
@@ -87,6 +94,10 @@ class SparseTensor4d {
       std::cerr << "compression must be 'largest' or 'fri'" << std::endl;
       exit(EXIT_FAILURE);
     }
+
+    auto t_total = get_timing(_total);
+    std::cout << "Total time for init of SparseTensor4d " << t_total
+              << std::endl;
   }
 
   // Getters/Setters

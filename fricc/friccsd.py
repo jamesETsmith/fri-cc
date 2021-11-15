@@ -82,7 +82,7 @@ def update_amps(
     fov = fock[:nocc, nocc:].copy()
     foo = fock[:nocc, :nocc].copy()
     fvv = fock[nocc:, nocc:].copy()
-    t_update_amps = time.time()
+    t_update_amps = time.perf_counter()
 
     #
     # Compression
@@ -92,7 +92,7 @@ def update_amps(
     # np.save("fricc_t2.npy", t2.ravel())
     # exit(0)
 
-    t_compress = time.time()
+    t_compress = time.perf_counter()
     # TODO Fix ravel here it's copying for big arrays
     t2_sparse = SparseTensor4d(
         t2.ravel(),
@@ -111,7 +111,7 @@ def update_amps(
             cc.fri_settings["sampling_method"],
             cc.fri_settings["verbose"],
         )
-    t_compress = time.time() - t_compress
+    t_compress = time.perf_counter() - t_compress
 
     #
     # Updating the Amplitudes
@@ -186,9 +186,9 @@ def update_amps(
     # Splitting up some of the taus
     if "O^4V^2" in compressed_contractions:
         t2new += lib.einsum("klij,ka,lb->ijab", Woooo, t1, t1)
-        t_0101 = time.time()
+        t_0101 = time.perf_counter()
         contract_DTSpT(Woooo, t2_sparse, t2new, "0101")
-        contraction_timings["0101"] = time.time() - t_0101
+        contraction_timings["0101"] = time.perf_counter() - t_0101
     else:
         tau = t2 + np.einsum("ia,jb->ijab", t1, t1)
         t2new += lib.einsum("klij,klab->ijab", Woooo, tau)
@@ -198,9 +198,9 @@ def update_amps(
     if "O^2V^4" in compressed_contractions:
         # log.warn(f"|t2_new|_2 = {np.linalg.norm(t2new.ravel(), ord=1)}")
 
-        t_2323 = time.time()
+        t_2323 = time.perf_counter()
         contract_DTSpT(Wvvvv, t2_sparse, t2new, "2323")
-        contraction_timings["2323"] = time.time() - t_2323
+        contraction_timings["2323"] = time.perf_counter() - t_2323
 
         # log.warn(f"|t2_new|_3 = {np.linalg.norm(t2new.ravel(), ord=1)}")
         # t2new = t2new.reshape(nocc, nocc, nvir, nvir)
@@ -218,27 +218,27 @@ def update_amps(
     # FRI-Compressed contraction
     if "O^3V^3" in compressed_contractions:
         tmp = np.zeros_like(t2new)
-        t_1302 = time.time()
+        t_1302 = time.perf_counter()
         contract_DTSpT(Wvoov, t2_sparse, tmp, "1302")
-        contraction_timings["1302"] = time.time() - t_1302
+        contraction_timings["1302"] = time.perf_counter() - t_1302
 
-        t_1202 = time.time()
+        t_1202 = time.perf_counter()
         contract_DTSpT(Wvovo, t2_sparse, tmp, "1202")
-        contraction_timings["1202"] = time.time() - t_1202
+        contraction_timings["1202"] = time.perf_counter() - t_1202
 
         t2new += tmp + tmp.transpose(1, 0, 3, 2)
 
         tmp = np.zeros_like(t2new)
-        t_1303 = time.time()
+        t_1303 = time.perf_counter()
         contract_DTSpT(Wvoov, t2_sparse, tmp, "1303")
-        contraction_timings["1303"] = time.time() - t_1303
+        contraction_timings["1303"] = time.perf_counter() - t_1303
 
         t2new -= tmp + tmp.transpose(1, 0, 3, 2)
 
         tmp = np.zeros_like(t2new)
-        t_1203 = time.time()
+        t_1203 = time.perf_counter()
         contract_DTSpT(Wvovo, t2_sparse, tmp, "1203")
-        contraction_timings["1203"] = time.time() - t_1203
+        contraction_timings["1203"] = time.perf_counter() - t_1203
         t2new -= tmp + tmp.transpose(1, 0, 3, 2)
 
     else:
@@ -261,7 +261,7 @@ def update_amps(
     #
     # Timing
     #
-    t_update_amps = time.time() - t_update_amps
+    t_update_amps = time.perf_counter() - t_update_amps
 
     log.debug(f"\nFRI: Compression Time {t_compress:.3f}")
     fri_time = copy.copy(t_compress)
@@ -287,9 +287,9 @@ def sparse_cc_Woooo(t1, t2_sparse, eris, contraction_timings):
     Wklij += lib.einsum("kclj,ic->klij", eris_ovoo, t1)
 
     eris_ovov = np.asarray(eris.ovov)
-    t_1323 = time.time()
+    t_1323 = time.perf_counter()
     contract_DTSpT(eris_ovov, t2_sparse, Wklij, "1323")
-    contraction_timings["1323"] = time.time() - t_1323
+    contraction_timings["1323"] = time.perf_counter() - t_1323
     # Wklij += lib.einsum("kcld,ijcd->klij", eris_ovov, t2)
 
     Wklij += lib.einsum("kcld,ic,jd->klij", eris_ovov, t1, t1)
@@ -319,17 +319,17 @@ def sparse_cc_Wvoov(t1, t2_sparse, eris, contraction_timings):
     # Wakic -= 0.5 * lib.einsum("lckd,ilad->akic", eris_ovov, t2)
     # Wakic += lib.einsum("ldkc,ilad->akic", eris_ovov, t2)
 
-    t_0112 = time.time()
+    t_0112 = time.perf_counter()
     contract_DTSpT(eris_ovov, t2_sparse, Wakic, "0112")
-    contraction_timings["0112"] = time.time() - t_0112
+    contraction_timings["0112"] = time.perf_counter() - t_0112
 
-    t_0313 = time.time()
+    t_0313 = time.perf_counter()
     contract_DTSpT(eris_ovov, t2_sparse, Wakic, "0313")
-    contraction_timings["0313"] = time.time() - t_0313
+    contraction_timings["0313"] = time.perf_counter() - t_0313
 
-    t_0113 = time.time()
+    t_0113 = time.perf_counter()
     contract_DTSpT(eris_ovov, t2_sparse, Wakic, "0113")
-    contraction_timings["0113"] = time.time() - t_0113
+    contraction_timings["0113"] = time.perf_counter() - t_0113
 
     Wakic -= lib.einsum("ldkc,id,la->akic", eris_ovov, t1, t1)
     return Wakic
@@ -343,9 +343,9 @@ def sparse_cc_Wvovo(t1, t2_sparse, eris, contraction_timings):
     Wakci += np.asarray(eris.oovv).transpose(2, 0, 3, 1)
 
     eris_ovov = np.asarray(eris.ovov)
-    t_0312 = time.time()
+    t_0312 = time.perf_counter()
     contract_DTSpT(eris_ovov, t2_sparse, Wakci, "0312")
-    contraction_timings["0312"] = time.time() - t_0312
+    contraction_timings["0312"] = time.perf_counter() - t_0312
 
     Wakci -= lib.einsum("lckd,id,la->akci", eris_ovov, t1, t1)
     return Wakci
@@ -387,7 +387,6 @@ def kernel(
 
     # Create list of energies so we can access them easily later
     mycc.energies = []
-    print("HERE")
     conv = False
     for istep in range(max_cycle):
         t1new, t2new = mycc.update_amps(t1, t2, eris)
@@ -395,13 +394,7 @@ def kernel(
         tmpvec -= mycc.amplitudes_to_vector(t1, t2)
         normt = numpy.linalg.norm(tmpvec)
         tmpvec = None
-        # TODO remove commented sections
-        # Skip damping
-        # if mycc.iterative_damping < 1.0:
-        #     alpha = mycc.iterative_damping
-        #     t1new = (1 - alpha) * t1 + alpha * t1new
-        #     t2new *= alpha
-        #     t2new += (1 - alpha) * t2
+
         t1, t2 = t1new, t2new
         t1new = t2new = None
         # Skip DIIS
@@ -422,6 +415,11 @@ def kernel(
         if abs(eccsd - eold) < tol and normt < tolnormt:
             conv = True
             break
+        if np.isnan(eccsd - eold):
+            conv = False
+            log.warn("FRICCSD FAILED THERE ARE NANS")
+            break
+
     log.timer("CCSD", *cput0)
     return conv, eccsd, t1, t2
 
