@@ -4,49 +4,6 @@
 
 using pytensor_4d = pybind11::detail::unchecked_mutable_reference<double, 4>;
 
-inline size_t SparseTensor4d::flat_idx(const int i, const int j, const int a,
-                                       const int b) {
-  return i * dims[1] * dims[2] * dims[3] + j * dims[2] * dims[3] + a * dims[3] +
-         b;
-}
-
-std::array<size_t, 4> SparseTensor4d::unpack_idx(const size_t idx) {
-  size_t i0 = idx / (dims[1] * dims[2] * dims[3]);
-  size_t i1 = idx % (dims[1] * dims[2] * dims[3]) / (dims[2] * dims[3]);
-  size_t i2 = idx % (dims[2] * dims[3]) / dims[3];
-  size_t i3 = idx % dims[3];
-  std::array<size_t, 4> idx_arr = {i0, i1, i2, i3};
-
-  // TODO take out for performance
-  for (int i = 0; i < 4; i++) {
-    if (idx_arr[i] >= dims[i]) {
-      std::cerr << "ERROR: " << idx_arr[i] << " >= " << dims[i]
-                << " for dimension " << i << " !!!" << std::endl;
-      std::cerr << "Indices are out of range for given tensor" << std::endl;
-      exit(EXIT_FAILURE);
-    }
-  }
-  return idx_arr;
-}
-
-void SparseTensor4d::set_element(const size_t mi, const size_t idx,
-                                 const double value) {
-  if (mi > nnz) {
-    std::cerr << "Index you requested is larger than the specified size"
-              << std::endl;
-    exit(EXIT_FAILURE);
-  }
-  indices[mi] = unpack_idx(idx);
-  data[mi] = value;
-}
-
-void SparseTensor4d::get_element(const size_t mi,
-                                 std::array<size_t, 4> &idx_arr,
-                                 double &value) {
-  idx_arr = indices[mi];
-  value = data[mi];
-}
-
 //
 // Contraction Helpers
 //

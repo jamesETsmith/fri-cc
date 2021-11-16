@@ -12,21 +12,22 @@ std::vector<size_t> argsort(std::span<double const> array, const size_t m) {
   // Create pairs
   std::vector<std::pair<double, size_t>> index_pairs(array.size());
 
-#pragma omp parallel for simd schedule(static, 16)
+#pragma omp parallel for schedule(static, 16)
   for (size_t i = 0; i < array.size(); i++) {
     index_pairs[i] = std::make_pair(array[i], i);
   }
 
   // Sort pairs
 
-  merge_sort<std::pair<double, size_t>>(index_pairs, "taskyield", [](const auto& left, const auto& right) {
-    return abs(left.first) > abs(right.first);
-  });
+  merge_sort<std::pair<double, size_t>>(
+      index_pairs, "taskyield", [](const auto& left, const auto& right) {
+        return abs(left.first) > abs(right.first);
+      });
 
   // Copy indices of largest magnitude to sorted_index and return
   std::vector<size_t> sorted_idx(m);
 
-#pragma omp parallel for simd schedule(static, 16)
+#pragma omp parallel for schedule(static, 16)
   for (size_t i = 0; i < sorted_idx.size(); i++) {
     sorted_idx[i] = index_pairs[i].second;
   }
@@ -44,13 +45,11 @@ std::vector<size_t> argsort(std::span<double const> array, const size_t m) {
 std::vector<double> lin_space_add_const(const double start, const double stop,
                                         size_t num, bool inclusive = false) {
   const double rn = (double)rand() / RAND_MAX;
-  // std::cout << "SYSTEMATIC RANDOM
-  // NUMBER " << rn << std::endl;
   std::vector<double> v(num);
   const double step =
       inclusive ? (stop - start) / (num - 1.) : (stop - start) / num;
 
-#pragma omp parallel for simd
+#pragma omp for simd
   for (size_t i = 0; i < num; i++) {
     v[i] = i * step + rn;
   }
@@ -381,6 +380,7 @@ std::vector<double> make_probability_vector(std::span<double const> x,
     p[D[i]] = 0.0;
   }
 
+#pragma omp parallel for schedule(static, 16)
   for (size_t i = 0; i < p.size(); i++) {
     if (p[i] > 1.) {
       std::cerr << "ERROR MAKING "
@@ -397,8 +397,8 @@ std::vector<double> make_probability_vector(std::span<double const> x,
   return p;
 }
 
-std::pair<std::vector<size_t>, double> get_d_largest(
-    std::span<double const> x, const size_t n_sample) {
+std::pair<std::vector<size_t>, double> get_d_largest(std::span<double const> x,
+                                                     const size_t n_sample) {
   double remaining_norm = one_norm(x);
   // std::cout << "FRI-C++: 1-NORM OF
   // X (t2) " << remaining_norm <<

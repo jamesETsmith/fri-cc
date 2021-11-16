@@ -23,27 +23,28 @@ if (NOT CPP_TEST)
 endif()
 
 # Special compile flags (i.e. optimizations) for release builds
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
-  execute_process(
-    COMMAND cat /sys/devices/cpu/caps/pmu_name
-    OUTPUT_VARIABLE ARCH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-  if (ARCH STREQUAL "")
-    message(WARNING "Architecture not found, using arch=native.")
-    set(ARCH "native")
-  else()
-    message(STATUS "Using the compiler optimizations for arch=${ARCH}")
-  endif()
-endif()
+# if (CMAKE_BUILD_TYPE STREQUAL "Release")
+#   execute_process(
+#     COMMAND cat /sys/devices/cpu/caps/pmu_name
+#     OUTPUT_VARIABLE ARCH
+#     OUTPUT_STRIP_TRAILING_WHITESPACE
+#   )
+#   if (ARCH STREQUAL "")
+#     message(WARNING "Architecture not found, using arch=native.")
+#     set(ARCH "native")
+#   else()
+#     message(STATUS "Using the compiler optimizations for arch=${ARCH}")
+#   endif()
+# endif()
+# set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -g -march=${ARCH} -Wno-narrowing")
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -g -march=${ARCH} -Wno-narrowing")
-message(STATUS "Using the following C++ compiler flags\n\t${CMAKE_CXX_FLAGS_RELEASE}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -g -Wno-narrowing")
 
-# User libc++ with Clang
+# Turn on some Clang specific things
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -flto=thin -mllvm -inline-threshold=1000")
 endif()
+message(STATUS "Using the following C++ compiler flags\n\t${CMAKE_CXX_FLAGS_RELEASE}")
 
 #
 # Some RPATH settings (more later during install)

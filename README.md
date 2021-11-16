@@ -10,7 +10,6 @@
 ### Requirements
 - C++20 Compiler
 - cmake
-- pybind11 (packages with project)
 - Python >= 3.6
     - PySCF
     - pytest
@@ -19,9 +18,7 @@
 
 | Compiler  |      Success       |
 | :-------: | :----------------: |
-| clang++9  | :heavy_check_mark: |
 | clang++10 | :heavy_check_mark: |
-|   g++9    | :heavy_check_mark: |
 |   g++10   | :heavy_check_mark: |
 
 

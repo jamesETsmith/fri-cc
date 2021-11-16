@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [g++-9, g++-10, clang++-10]
+        compiler: [g++-10, clang++-10]
         python-version: ['3.9']
        
     steps:
