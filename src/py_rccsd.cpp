@@ -31,10 +31,10 @@ PYBIND11_MODULE(py_rccsd, m) {
 
   py::class_<SparseTensor4d>(m, "SparseTensor4d")
       .def(py::init<std::array<size_t, 4>, double>())
-      .def(py::init<const std::vector<double>&, std::array<size_t, 4>,
+      .def(py::init<py::array_t<double>, std::array<size_t, 4>,
                     const size_t, const std::string, const std::string,
                     const bool>(),
-           py::arg("tensor_flat"), py::arg("dims"), py::arg("m"),
+           py::arg("tensor_arr").noconvert(), py::arg("dims"), py::arg("m"),
            py::arg("compression") = "fri",
            py::arg("sampling_method") = "pivotal", py::arg("verbose") = false)
       .def("get_element",

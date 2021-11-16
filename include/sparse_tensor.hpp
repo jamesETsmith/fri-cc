@@ -6,6 +6,7 @@
 #include <array>
 #include <fri_utils.hpp>
 #include <fricc.hpp>
+#include <span>
 
 namespace py = pybind11;
 
@@ -46,15 +47,18 @@ class SparseTensor4d {
     data.resize(nnz);
   }
 
-  SparseTensor4d(const std::vector<double>& tensor_flat,
-                 std::array<size_t, 4> dims, const size_t m,
-                 const std::string compression = "fri",
+  SparseTensor4d(py::array_t<double> tensor_arr, std::array<size_t, 4> dims,
+                 const size_t m, const std::string compression = "fri",
                  const std::string sampling_method = "pivotal",
                  const bool verbose = false)
       : dims(dims), nnz(m) {
+    //
     auto _total = std::chrono::steady_clock::now();
     indices.resize(m);
     data.resize(m);
+
+    std::span tensor_flat(tensor_arr.data(),
+                          static_cast<size_t>(tensor_arr.size()));
 
     // Input Checking
     if (!compression.compare("largest")) {

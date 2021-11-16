@@ -6,7 +6,7 @@ project(fricc LANGUAGES CXX)
 #
 # Compiler standards and options
 #
-set(CMAKE_CXX_STANDARD 17) 
+set(CMAKE_CXX_STANDARD 20) 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For clang-tidy
@@ -39,6 +39,11 @@ endif()
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -g -march=${ARCH} -Wno-narrowing")
 message(STATUS "Using the following C++ compiler flags\n\t${CMAKE_CXX_FLAGS_RELEASE}")
+
+# User libc++ with Clang
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+endif()
 
 #
 # Some RPATH settings (more later during install)

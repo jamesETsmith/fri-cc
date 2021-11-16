@@ -8,7 +8,7 @@
 #include <numeric>
 #include <sorting_sandbox/mergesort.hpp>  // For parallel mergesort implementation
 
-std::vector<size_t> argsort(const std::vector<double>& array, const size_t m) {
+std::vector<size_t> argsort(std::span<double const> array, const size_t m) {
   // Create pairs
   std::vector<std::pair<double, size_t>> index_pairs(array.size());
 
@@ -19,7 +19,7 @@ std::vector<size_t> argsort(const std::vector<double>& array, const size_t m) {
 
   // Sort pairs
 
-  merge_sort(index_pairs, "taskyield", [](const auto& left, const auto& right) {
+  merge_sort<std::pair<double, size_t>>(index_pairs, "taskyield", [](const auto& left, const auto& right) {
     return abs(left.first) > abs(right.first);
   });
 
@@ -162,9 +162,9 @@ std::vector<size_t> sample_systematic(const size_t& n_sample,
 //
 //
 // DUMB WAY: TODO FIX ME
-double one_norm(const std::vector<double>& q) {
+double one_norm(std::span<double const> q) {
   double q_norm = 0.0;
-#pragma omp parallel for simd reduction(+ : q_norm)
+#pragma omp parallel for schedule(static, 16) reduction(+ : q_norm)
   for (int i = 0; i < q.size(); i++) {
     q_norm += abs(q[i]);
   }
@@ -175,7 +175,7 @@ double one_norm(const std::vector<double>& q) {
 //
 //
 std::vector<size_t> parallel_sample(const size_t& n_sample,
-                                    const std::vector<double>& q) {
+                                    std::span<double const> q) {
   // std::cout << "Starting parallel
   // sample" << std::endl;
   std::vector<size_t> S(n_sample);
@@ -365,7 +365,7 @@ std::vector<size_t> parallel_sample(const size_t& n_sample,
 //
 //
 //
-std::vector<double> make_probability_vector(const std::vector<double>& x,
+std::vector<double> make_probability_vector(std::span<double const> x,
                                             const size_t n_sample,
                                             const std::vector<size_t>& D,
                                             const double remaining_norm) {
@@ -398,7 +398,7 @@ std::vector<double> make_probability_vector(const std::vector<double>& x,
 }
 
 std::pair<std::vector<size_t>, double> get_d_largest(
-    const std::vector<double>& x, const size_t n_sample) {
+    std::span<double const> x, const size_t n_sample) {
   double remaining_norm = one_norm(x);
   // std::cout << "FRI-C++: 1-NORM OF
   // X (t2) " << remaining_norm <<
@@ -437,7 +437,7 @@ std::pair<std::vector<size_t>, double> get_d_largest(
 }
 
 std::pair<std::vector<size_t>, std::vector<double>> fri_compression(
-    const std::vector<double>& x, const size_t n_sample,
+    std::span<double const> x, const size_t n_sample,
     const std::string sampling_method, const bool verbose) {
   // Input checking
   if (!sampling_method.compare("pivotal") &&
