@@ -106,10 +106,6 @@ else()
   message(STATUS "Skipping build of C++ tests. To set it run:\n\tcmake .. -DCPP_TEST=ON")
 endif()
 
-#
-# Benchmark/Profiling Kernels
-#
-# add_subdirectory(src/bench)
 
 #
 # Pybind11 Wrappers/Module
