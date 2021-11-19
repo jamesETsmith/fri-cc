@@ -41,7 +41,7 @@ mycc2.kernel()
 t_ccsd = time.time() - t_ccsd
 
 fri_settings = {
-    "m_keep": 1e2,
+    "m_keep": 1e3,
     "compression": "fri",
     "sampling_method": "systematic",
     "compressed_contractions": ["O^2V^4"],

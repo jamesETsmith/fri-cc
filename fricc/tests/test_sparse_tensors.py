@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from fricc import SparseTensor4d, contract_DTSpT
+from fricc.py_rccsd import SparseTensor4d, contract_DTSpT
 
 npt = np.testing
 np.random.seed(20)

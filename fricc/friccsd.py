@@ -93,9 +93,8 @@ def update_amps(
     # exit(0)
 
     t_compress = time.perf_counter()
-    # TODO Fix ravel here it's copying for big arrays
     t2_sparse = SparseTensor4d(
-        t2.ravel(),
+        t2,
         t2.shape,
         int(m_keep),
         cc.fri_settings["compression"],
@@ -104,7 +103,7 @@ def update_amps(
     )
     if "O^3V^3" in compressed_contractions or "O^4V^2" in compressed_contractions:
         t2_sparse_alt = SparseTensor4d(
-            t2.ravel(),
+            t2,
             t2.shape,
             int(m_keep),
             cc.fri_settings["compression"],
@@ -117,7 +116,6 @@ def update_amps(
     # Updating the Amplitudes
     #
 
-    # TODO sparsify
     Foo = imd.cc_Foo(t1, t2, eris)
     Fvv = imd.cc_Fvv(t1, t2, eris)
     Fov = imd.cc_Fov(t1, t2, eris)
