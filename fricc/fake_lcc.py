@@ -91,6 +91,7 @@ class LCCSD(ccsd.CCSD):
         if abs(e.imag) > 1e-4:
             logger.warn(self, 'Non-zero imaginary part found in RCCSD energy %s', e)
         return e.real
+        
     def update_amps(self, t1, t2, eris):
 
         cc = self

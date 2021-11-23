@@ -276,7 +276,7 @@ void contract_SparseTensor4d_0313_wrapper(pytensor_4d ovov, SparseTensor4d &T,
         if (idx[2] == a && idx[0] == i) {
           size_t l = idx[1], d = idx[3];
           for (size_t k = 0; k < no; k++) {
-#pragma unroll partial(4)
+#pragma unroll 4
             for (size_t c = 0; c < nv; c++) {
               // #pragma unroll
               output(a, k, i, c) -= 0.5 * ovov(l, c, k, d) * value;

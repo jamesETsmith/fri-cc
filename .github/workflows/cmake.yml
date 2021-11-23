@@ -63,4 +63,4 @@ jobs:
 
     - name: Python Tests
       working-directory: ${{github.workspace}}
-      run: pytest -v fricc/tests
+      run: pytest -v fricc/tests --disable-warnings
