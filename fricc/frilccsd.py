@@ -13,8 +13,9 @@ from .py_rccsd import contract_DTSpT
 from .friccsd import FRICCSD, default_fri_settings, ALLOWED_CONTRACTIONS
 
 numpy = np
+default_fri_settings["LCCD"] = False
 
-
+# fmt: off
 def update_amps(
     cc,
     t1: np.ndarray,
@@ -42,7 +43,8 @@ def update_amps(
 
     Notes
     -----
-    Ref: Hirata et al., J. Chem. Phys. 120, 2581 (2004) Eqs.(35)-(36)
+    Ref: Taube and Bartlett J. Chem. Phys. 130, 144112 (2009) Eq. 13 and 15
+
     """
     #
     # Check Args
@@ -72,8 +74,6 @@ def update_amps(
     mo_e_v = eris.mo_energy[nocc:] + cc.level_shift
 
     fov = fock[:nocc, nocc:].copy()
-    foo = fock[:nocc, :nocc].copy()
-    fvv = fock[nocc:, nocc:].copy()
     t_update_amps = time.perf_counter()
 
     #
@@ -85,9 +85,8 @@ def update_amps(
     # exit(0)
 
     t_compress = time.perf_counter()
-    # TODO Fix ravel here it's copying for big arrays
     t2_sparse = SparseTensor4d(
-        t2.ravel(),
+        t2,
         t2.shape,
         int(m_keep),
         cc.fri_settings["compression"],
@@ -107,29 +106,64 @@ def update_amps(
     Foo[np.diag_indices(nocc)] -= mo_e_o
     Fvv[np.diag_indices(nvir)] -= mo_e_v
 
+    # From So Hirata http://faculty.scs.illinois.edu/hirata/lccsd_t1.out
+    # ✓ [ + 1.0 ] * f ( p2 h1 ) 
+    # ✓ [ - 1.0 ] * Sum ( h3 ) * f ( h3 h1 ) * t ( p2 h3 )
+    # ✓ [ + 1.0 ] * Sum ( p3 ) * f ( p2 p3 ) * t ( p3 h1 )
+
+    #   [ - 1.0 ] * Sum ( h4 p3 ) * t ( p3 h4 ) * v ( h4 p2 h1 p3 )
+    # ✓ [ + 1.0 ] * Sum ( h3 p4 ) * f ( h3 p4 ) * t ( p4 p2 h3 h1 )
+
+    # ✓ [ + 0.5 ] * Sum ( h4 h5 p3 ) * t ( p3 p2 h4 h5 ) * v ( h4 h5 h1 p3 )
+    # ✓ [ + 0.5 ] * Sum ( h5 p3 p4 ) * t ( p3 p4 h5 h1 ) * v ( h5 p2 p3 p4 )
+
     # T1 equation 13 in Bartlett
     t1new = np.zeros_like(t1)
+
     # Term 1
     t1new += fov.conj()
+    # print(f"Term 1 {np.linalg.norm(fov.conj()):3e}")
 
     # Term 2
     t1new += np.einsum("ac,ic->ia", Fvv, t1)
+    # _tmp = np.einsum("ac,ic->ia", Fvv, t1)
+    # print(f"Term 2 {np.linalg.norm(_tmp):3e}")
 
     # Term 3
     t1new -= np.einsum("ki,ka->ia", Foo, t1)
+    # _tmp = np.einsum("ki,ka->ia", Foo, t1)
+    # print(f"Term 3 {np.linalg.norm(_tmp):3e}")
+
 
     # Term 4
-    # TODO: INCONSISTENT
-    t1new += (2 * np.einsum("kcai,kc->ia", eris.ovvo, t1) - np.einsum("kiac,kc->ia", eris.oovv, t1))
+    # TODO: INCONSISTENT between Stanton and Taube paper (and Hirata's website)
+    t1new += (2 * np.einsum('kcai,kc->ia', eris.ovvo, t1) - np.einsum('kiac,kc->ia', eris.oovv, t1))
+    _tmp = (2 * np.einsum("kcai,kc->ia", eris.ovvo, t1) - np.einsum("kiac,kc->ia", eris.oovv, t1))
+    print(f"Term 4 {np.linalg.norm(_tmp):3e}")
+
 
     # Term 5
     eris_ovvv = np.asarray(eris.get_ovvv())
     t1new += (2 * lib.einsum("kdac,ikcd->ia", eris_ovvv, t2) - lib.einsum("kcad,ikcd->ia", eris_ovvv, t2))
+    # _tmp = (2 * lib.einsum("kdac,ikcd->ia", eris_ovvv, t2) - lib.einsum("kcad,ikcd->ia", eris_ovvv, t2))
+    # print(f"Term 5 {np.linalg.norm(_tmp):3e}")
 
     # Term 6
     eris_ovoo = np.asarray(eris.ovoo, order="C")
     t1new -= (2 * lib.einsum("lcki,klac->ia", eris_ovoo, t2) - lib.einsum("kcli,klac->ia", eris_ovoo, t2))
+    # _tmp = (2 * lib.einsum("lcki,klac->ia", eris_ovoo, t2) - lib.einsum("kcli,klac->ia", eris_ovoo, t2))
+    # print(f"Term 6 {np.linalg.norm(_tmp):3e}")
 
+    # LinΛCCSD Term in Eq 14
+    # t1new += np.einsum("jiab,jb->ia", t2, fov)
+    # _tmp = 2*np.einsum('kc,kica->ia', fov, t2)  -np.einsum('kc,ikca->ia', fov, t2)
+    # t1new += _tmp
+    # print(np.linalg.norm(_tmp))
+
+    # LCCD
+    if cc.fri_settings["LCCD"]:
+        t1 = np.zeros_like(t1)
+        t1new = np.zeros_like(t1) # DO LCCD
 
     #
     # T2 equation
@@ -145,11 +179,11 @@ def update_amps(
 
     # Term 3
     tmp = lib.einsum("ac,ijcb->ijab", Fvv, t2)
-    t2new += tmp + tmp.transpose(1, 0, 3, 2)
+    t2new += (tmp + tmp.transpose(1, 0, 3, 2))
 
-    Woooo = np.asarray(eris.oooo).transpose(0, 2, 1, 3)
-    Wvoov = np.asarray(eris.ovvo).transpose(2, 0, 3, 1)
-    Wvovo = np.asarray(eris.oovv).transpose(2, 0, 3, 1)
+    Woooo = np.asarray(eris.oooo).copy().transpose(0, 2, 1, 3)
+    Wvoov = np.asarray(eris.ovvo).copy().transpose(2, 0, 3, 1)
+    Wvovo = np.asarray(eris.oovv).copy().transpose(2, 0, 3, 1)
     Wvvvv = np.asarray(imd._get_vvvv(eris)).transpose(0, 2, 1, 3)
 
     # Term 4
@@ -201,23 +235,21 @@ def update_amps(
         tmp = 2 * lib.einsum("akic,kjcb->ijab", Wvoov, t2)
         tmp -= lib.einsum("akci,kjcb->ijab", Wvovo, t2)
 
-        t2new += tmp + tmp.transpose(1, 0, 3, 2)
+        t2new += (tmp + tmp.transpose(1, 0, 3, 2))
 
         tmp = lib.einsum("akic,kjbc->ijab", Wvoov, t2)
-        t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+        t2new -= (tmp + tmp.transpose(1, 0, 3, 2))
 
         tmp = lib.einsum("bkci,kjac->ijab", Wvovo, t2)
-        t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+        t2new -= (tmp + tmp.transpose(1, 0, 3, 2))
 
     # Term 7
-    tmp2 = eris_ovoo.transpose(1, 3, 0, 2).conj()
-    tmp = lib.einsum("akij,kb->ijab", tmp2, t1)
-    t2new -= tmp + tmp.transpose(1, 0, 3, 2)
+    tmp = lib.einsum("akij,kb->ijab", eris_ovoo.transpose(1, 3, 0, 2).conj(), t1) 
+    t2new -= (tmp + tmp.transpose(1, 0, 3, 2))
 
     # Term 8
-    tmp2 = np.asarray(eris_ovvv).conj().transpose(1, 3, 0, 2)
-    tmp = lib.einsum("abic,jc->ijab", tmp2, t1)
-    t2new += tmp + tmp.transpose(1, 0, 3, 2)
+    tmp = lib.einsum("iabc,jc->ijab", np.asarray(eris_ovvv).conj(), t1)
+    t2new += (tmp + tmp.transpose(1, 0, 3, 2))
 
     #
     #

@@ -1,12 +1,12 @@
 from pyscf import gto, scf, cc
-import fricc
+from fricc import fake_lcc
 
 #
 #
 #
 system = "benzene"
-# system = "nitrogen"
-system = "methanol"
+system = "nitrogen"
+# system = "methanol"
 
 #
 #
@@ -67,33 +67,17 @@ print(f"Error in CCSD {ccsd_error:.3e} (Ha)")
 #
 # LCCD
 #
-mylccd = fricc.FRILCCSD(
-    mf,
-    fri_settings={
-        "compressed_contractions": [],
-        "compression": "largest",
-        "m_keep": 10,
-        "LCCD": True,
-    },
-)
+mylccd = fake_lcc.LCCD(mf)
 mylccd.kernel()
 
-lccsd_error = abs(mylccd.e_tot - nwchem[system]["lccd"])
-print(f"Error in LCCD {lccsd_error:.3e} (Ha)")
+lccd_error = abs(mylccd.e_tot - nwchem[system]["lccd"])
+print(f"Error in LCCD {lccd_error:.3e} (Ha)")
 
 #
 # LCCSD
 #
 
-mylccsd = fricc.FRILCCSD(
-    mf,
-    fri_settings={
-        "compressed_contractions": [],
-        "compression": "largest",
-        "m_keep": 10,
-    },
-)
-# mylccsd.frozen = 2
+mylccsd = fake_lcc.LCCSD(mf)
 mylccsd.kernel()
 
 lccsd_error = abs(mylccsd.e_tot - nwchem[system]["lccsd"])
