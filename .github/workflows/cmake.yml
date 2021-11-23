@@ -63,4 +63,4 @@ jobs:
 
     - name: Python Tests
       working-directory: ${{github.workspace}}
-      run: pytest -v fricc/tests --disable-warnings
+      run: OMP_NUM_THREADS=1 pytest -v fricc/tests --disable-warnings
