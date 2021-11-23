@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [g++-10, clang++-10]
+        compiler: [g++-10]
         python-version: ['3.9']
        
     steps:
@@ -63,6 +63,4 @@ jobs:
 
     - name: Python Tests
       working-directory: ${{github.workspace}}
-      run: |
-        export OMP_NUM_THREADS=1
-        pytest -v fricc/tests --disable-warnings
+      run: pytest -v fricc/tests --disable-warnings
