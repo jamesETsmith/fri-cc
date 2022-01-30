@@ -18,7 +18,6 @@
 
 | Compiler  |      Success       |
 | :-------: | :----------------: |
-| clang++10 | :heavy_check_mark: |
 |   g++10   | :heavy_check_mark: |
 
 

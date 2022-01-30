@@ -13,12 +13,13 @@ from .py_rccsd import contract_DTSpT
 numpy = np
 
 default_fri_settings = {
-    "m_keep": 1000,
-    "compression": "fri",
-    "sampling_method": "systematic",
-    "verbose": False,
-    "compressed_contractions": ["O^2V^4"],
-}
+        "m_keep": 1000,
+        "compression": "fri",
+        "sampling_method": "systematic",
+        "verbose": False,
+        "compressed_contractions": ["O^2V^4"],
+    }
+
 
 ALLOWED_CONTRACTIONS = ["O^2V^4", "O^3V^3", "O^4V^2"]
 
@@ -91,6 +92,7 @@ def update_amps(
     # log.warn(f"|t2|_1 = {np.linalg.norm(t2.ravel(), ord=1)}")
     # np.save("fricc_t2.npy", t2.ravel())
     # exit(0)
+    t2 = np.ascontiguousarray(t2)
 
     t_compress = time.perf_counter()
     t2_sparse = SparseTensor4d(
@@ -135,14 +137,14 @@ def update_amps(
     t1new += 2 * np.einsum("kcai,kc->ia", eris.ovvo, t1)
     t1new += -np.einsum("kiac,kc->ia", eris.oovv, t1)
 
-    # TODO sparsify ? (O^2V^3)
+    # (O^2V^3)
     eris_ovvv = np.asarray(eris.get_ovvv())
     t1new += 2 * lib.einsum("kdac,ikcd->ia", eris_ovvv, t2)
     t1new += -lib.einsum("kcad,ikcd->ia", eris_ovvv, t2)
     t1new += 2 * lib.einsum("kdac,kd,ic->ia", eris_ovvv, t1, t1)
     t1new += -lib.einsum("kcad,kd,ic->ia", eris_ovvv, t1, t1)
 
-    # TODO sparsify ? (O^3V^2)
+    # (O^3V^2)
     eris_ovoo = np.asarray(eris.ovoo, order="C")
     t1new += -2 * lib.einsum("lcki,klac->ia", eris_ovoo, t2)
     t1new += lib.einsum("kcli,klac->ia", eris_ovoo, t2)
@@ -184,9 +186,11 @@ def update_amps(
     # Splitting up some of the taus
     if "O^4V^2" in compressed_contractions:
         t2new += lib.einsum("klij,ka,lb->ijab", Woooo, t1, t1)
+
         t_0101 = time.perf_counter()
         contract_DTSpT(Woooo, t2_sparse, t2new, "0101")
         contraction_timings["0101"] = time.perf_counter() - t_0101
+
     else:
         tau = t2 + np.einsum("ia,jb->ijab", t1, t1)
         t2new += lib.einsum("klij,klab->ijab", Woooo, tau)
@@ -194,18 +198,18 @@ def update_amps(
     # FRI-Compressed contraction
     t2new += lib.einsum("abcd,ia,jb->ijab", Wvvvv, t1, t1)
     if "O^2V^4" in compressed_contractions:
-        # log.warn(f"|t2_new|_2 = {np.linalg.norm(t2new.ravel(), ord=1)}")
+        # log.warn(f"|t2_new|_2323 = {np.linalg.norm(t2new.ravel(), ord=1)}")
 
         t_2323 = time.perf_counter()
         contract_DTSpT(Wvvvv, t2_sparse, t2new, "2323")
         contraction_timings["2323"] = time.perf_counter() - t_2323
 
-        # log.warn(f"|t2_new|_3 = {np.linalg.norm(t2new.ravel(), ord=1)}")
+        # log.warn(f"|t2_new|_2323 = {np.linalg.norm(t2new.ravel(), ord=1)}")
         # t2new = t2new.reshape(nocc, nocc, nvir, nvir)
     else:
-        # log.warn(f"|t2_new|_2 = {np.linalg.norm(t2new.ravel(), ord=1)}")
+        # log.warn(f"|t2_new|_2323 = {np.linalg.norm(t2new.ravel(), ord=1)}")
         t2new += lib.einsum("abcd,ijcd->ijab", Wvvvv, t2)
-        # log.warn(f"|t2_new|_3 = {np.linalg.norm(t2new.ravel(), ord=1)}")
+        # log.warn(f"|t2_new|_2323 = {np.linalg.norm(t2new.ravel(), ord=1)}")
 
     # TODO sparsify? O^2V^3
     tmp = lib.einsum("ac,ijcb->ijab", Lvv, t2)
@@ -373,7 +377,7 @@ def kernel(
     cput1 = cput0 = (logger.process_clock(), logger.perf_counter())
     eold = 0
     eccsd = mycc.energy(t1, t2, eris)
-    log.info("Init E_corr(CCSD) = %.15g", eccsd)
+    log.info("Init E_corr(%s) = %.15g", mycc.__class__.__name__, eccsd)
 
     if isinstance(mycc.diis, lib.diis.DIIS):
         adiis = mycc.diis
@@ -403,22 +407,29 @@ def kernel(
         mycc.energies.append(copy.deepcopy(eccsd))
         # print(mycc.energies)
         log.info(
-            "cycle = %d  E_corr(CCSD) = %.15g  dE = %.9g  norm(t1,t2) = %.6g",
+            "cycle = %d  E_corr(%s) = %.15g  dE = %.9g  norm(t1,t2) = %.6g",
             istep + 1,
+            mycc.__class__.__name__,
             eccsd,
             eccsd - eold,
             normt,
         )
-        cput1 = log.timer("CCSD iter", *cput1)
+        cput1 = log.timer(f"{mycc.__class__.__name__} iter", *cput1)
         if abs(eccsd - eold) < tol and normt < tolnormt:
             conv = True
             break
         if np.isnan(eccsd - eold):
             conv = False
-            log.warn("FRICCSD FAILED THERE ARE NANS")
+            log.warn(f"{mycc.__class__.__name__} FAILED THERE ARE NANS")
+            break
+        elif abs(eccsd - eold) > 1e5:
+            conv = False
+            log.warn(
+                f"{mycc.__class__.__name__} FAILED BECAUSE dE = {abs(eccsd - eold)}"
+            )
             break
 
-    log.timer("CCSD", *cput0)
+    log.timer(f"{mycc.__class__.__name__}", *cput0)
     return conv, eccsd, t1, t2
 
 
@@ -426,16 +437,17 @@ def kernel(
 # FRI-CCSD class
 #
 class FRICCSD(ccsd.CCSD):
+
     def __init__(
         self,
         mf,
+        fri_settings=default_fri_settings,
         frozen=None,
         mo_coeff=None,
         mo_occ=None,
-        fri_settings=default_fri_settings,
     ):
-        mycc = super().__init__(mf, frozen=None, mo_coeff=None, mo_occ=None)
-        self.fri_settings = fri_settings
+        mycc = super().__init__(mf, frozen=frozen, mo_coeff=mo_coeff, mo_occ=mo_occ)
+        self._fri_settings = fri_settings
 
         log = lib.logger.new_logger(self)
 
@@ -444,6 +456,8 @@ class FRICCSD(ccsd.CCSD):
             if k not in self.fri_settings.keys():
                 log.debug(f"FRI: Setting {k} to {v}")
                 fri_settings[k] = v
+            else:
+                log.debug(f"FRI: {k} is set to {v}")
 
         # Check contractions
         for c in self.fri_settings["compressed_contractions"]:
@@ -451,6 +465,10 @@ class FRICCSD(ccsd.CCSD):
                 raise ValueError(f"Contraction ({c}) is not supported!")
 
         return mycc
+
+    @property
+    def fri_settings(self):
+        return self._fri_settings
 
     def ccsd(self, t1=None, t2=None, eris=None):
         assert self.mo_coeff is not None

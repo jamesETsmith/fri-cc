@@ -43,7 +43,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -g -Wno-narrowing")
 # Turn on some Clang specific things
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -stdlib=libc++ -flto=thin")
-    # set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mllvm -inline-threshold=1000 -mllvm -polly -mllvm -polly-parallel -lomp")
 endif()
 message(STATUS "Using the following C++ compiler flags\n\t${CMAKE_CXX_FLAGS_RELEASE}")
 
