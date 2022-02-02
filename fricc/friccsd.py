@@ -13,12 +13,12 @@ from .py_rccsd import contract_DTSpT
 numpy = np
 
 default_fri_settings = {
-        "m_keep": 1000,
-        "compression": "fri",
-        "sampling_method": "systematic",
-        "verbose": False,
-        "compressed_contractions": ["O^2V^4"],
-    }
+    "m_keep": 1000,
+    "compression": "fri",
+    "sampling_method": "systematic",
+    "verbose": False,
+    "compressed_contractions": ["O^2V^4", "O^3V^3", "O^4V^2"],
+}
 
 
 ALLOWED_CONTRACTIONS = ["O^2V^4", "O^3V^3", "O^4V^2"]
@@ -437,7 +437,6 @@ def kernel(
 # FRI-CCSD class
 #
 class FRICCSD(ccsd.CCSD):
-
     def __init__(
         self,
         mf,
@@ -457,7 +456,7 @@ class FRICCSD(ccsd.CCSD):
                 log.debug(f"FRI: Setting {k} to {v}")
                 fri_settings[k] = v
             else:
-                log.debug(f"FRI: {k} is set to {v}")
+                log.debug(f"FRI: {k} is set to {fri_settings[k]}")
 
         # Check contractions
         for c in self.fri_settings["compressed_contractions"]:

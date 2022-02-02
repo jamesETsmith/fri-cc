@@ -14,13 +14,13 @@ from .friccsd import FRICCSD, ALLOWED_CONTRACTIONS
 
 numpy = np
 default_fri_settings = {
-        "m_keep": 1000,
-        "compression": "fri",
-        "sampling_method": "systematic",
-        "verbose": False,
-        "compressed_contractions": ["O^2V^4"],
-        "LCCD": False,
-        "Independent Compressions": False,
+    "m_keep": 1000,
+    "compression": "fri",
+    "sampling_method": "systematic",
+    "verbose": False,
+    "compressed_contractions": ["O^2V^4", "O^3V^3", "O^4V^2"],
+    "LCCD": False,
+    "Independent Compressions": False,
 }
 
 
@@ -523,7 +523,6 @@ def lin_cc_energy(mycc, t1=None, t2=None, eris=None):
 
 
 class FRILCCSD(FRICCSD):
-
     def __init__(
         self,
         mf,
@@ -533,7 +532,7 @@ class FRILCCSD(FRICCSD):
         fri_settings=default_fri_settings,
     ):
         mycc = super().__init__(mf, frozen=frozen, mo_coeff=mo_coeff, mo_occ=mo_occ)
-        self.fri_settings = fri_settings
+        self._fri_settings = fri_settings
 
         log = lib.logger.new_logger(self)
 
@@ -544,7 +543,7 @@ class FRILCCSD(FRICCSD):
                 log.debug(f"FRI: Setting {k} to {v}")
                 fri_settings[k] = v
             else:
-                log.debug(f"FRI: {k} is set to {v}")
+                log.debug(f"FRI: {k} is set to {fri_settings[k]}")
 
         # Check contractions
         for c in self.fri_settings["compressed_contractions"]:
