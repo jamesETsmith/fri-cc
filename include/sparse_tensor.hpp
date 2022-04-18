@@ -10,23 +10,6 @@
 
 namespace py = pybind11;
 
-// Tensor utilities
-// template <int p>
-// double p_norm(RowTensor4d& error) {
-//   double norm;
-// #pragma omp parallel for collapse(4) reduction(+ : norm)
-//   for (size_t i = 0; i < error.dimension(0); i++) {
-//     for (size_t j = 0; j < error.dimension(1); j++) {
-//       for (size_t a = 0; a < error.dimension(2); a++) {
-//         for (size_t b = 0; b < error.dimension(3); b++) {
-//           norm += pow(abs(error(i, j, a, b)), p);
-//         }
-//       }
-//     }
-//   }
-//   return pow(norm, 1. / p);
-// }
-
 class SparseTensor4d {
   //
   const size_t nnz;
@@ -162,4 +145,9 @@ inline void SparseTensor4d::get_element(const size_t mi,
 void contract_SparseTensor4d_wrapper(py::array_t<double> W, SparseTensor4d& T,
                                      py::array_t<double> output,
                                      const std::string term);
+
+void contract_SparseTensor4d_wrapper_experimental(py::array_t<double> W,
+                                                  SparseTensor4d& T,
+                                                  py::array_t<double> output,
+                                                  const std::string term);
 #endif

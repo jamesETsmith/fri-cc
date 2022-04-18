@@ -276,7 +276,7 @@ void contract_SparseTensor4d_0313_wrapper(pytensor_4d ovov, SparseTensor4d &T,
         if (idx[2] == a && idx[0] == i) {
           size_t l = idx[1], d = idx[3];
           for (size_t k = 0; k < no; k++) {
-// #pragma unroll 4
+            // #pragma unroll 4
             for (size_t c = 0; c < nv; c++) {
               // #pragma unroll
               output(a, k, i, c) -= 0.5 * ovov(l, c, k, d) * value;
@@ -375,6 +375,83 @@ void contract_SparseTensor4d_wrapper(py::array_t<double> W_raw,
     contract_SparseTensor4d_0313_wrapper(W, T, output);
   } else if (term == "0312") {
     contract_SparseTensor4d_0312_wrapper(W, T, output);
+  } else {
+    std::cerr << "CASE NOT IMPLEMENTED" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+}
+
+//
+// Testing out the new contraction scheme
+//
+
+// 2323 O^2V^4 `t2new += lib.einsum('abcd,ijcd->ijab', Wvvvv, tau)`
+void contract_SparseTensor4d_2323_taskloop(pytensor_4d W, SparseTensor4d &T,
+                                           pytensor_4d output) {
+  const size_t no = T.dimension(0);
+  const size_t nv = T.dimension(2);
+  const size_t sp_size = T.size();
+
+  size_t di = T.dimensions()[0], dj = T.dimensions()[1], da = W.shape(0),
+         db = W.shape(1);
+
+  std::array<size_t, 4> idx;
+  double value;
+#pragma omp parallel private(idx, value)
+#pragma omp single
+  // Loop over sparse indices
+  for (size_t s = 0; s < sp_size; s++) {
+    T.get_element(s, idx, value);
+    const int i = idx[0], j = idx[1];
+    const int c = idx[2], d = idx[3];
+
+// #pragma omp taskloop collapse(2) shared(output, W)
+#pragma omp taskloop collapse(2) grainsize(1024) shared(output, W)
+    for (int a = 0; a < da; a++) {
+      for (int b = 0; b < db; b++) {
+        output(i, j, a, b) += W(a, b, c, d) * value;
+      }
+    }
+  }
+}
+
+void contract_SparseTensor4d_2323_atomic(pytensor_4d W, SparseTensor4d &T,
+                                         pytensor_4d output) {
+  const size_t no = T.dimension(0);
+  const size_t nv = T.dimension(2);
+  const size_t sp_size = T.size();
+
+  size_t di = T.dimensions()[0], dj = T.dimensions()[1], da = W.shape(0),
+         db = W.shape(1);
+
+  std::array<size_t, 4> idx;
+  double value;
+#pragma omp parallel for schedule(dynamic, 32) private(idx, value) \
+    shared(output, W)
+  for (size_t s = 0; s < sp_size; s++) {
+    T.get_element(s, idx, value);
+    const int i = idx[0], j = idx[1];
+    const int c = idx[2], d = idx[3];
+
+    for (int a = 0; a < da; a++) {
+      for (int b = 0; b < db; b++) {
+#pragma omp atomic
+        output(i, j, a, b) += W(a, b, c, d) * value;
+      }
+    }
+  }
+}
+
+void contract_SparseTensor4d_wrapper_experimental(
+    py::array_t<double> W_raw, SparseTensor4d &T,
+    py::array_t<double> output_raw, const std::string term) {
+  auto W = W_raw.mutable_unchecked<4>();
+  auto output = output_raw.mutable_unchecked<4>();
+
+  if (term == "taskloop") {
+    contract_SparseTensor4d_2323_taskloop(W, T, output);
+  } else if (term == "atomic") {
+    contract_SparseTensor4d_2323_atomic(W, T, output);
   } else {
     std::cerr << "CASE NOT IMPLEMENTED" << std::endl;
     exit(EXIT_FAILURE);

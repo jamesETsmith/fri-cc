@@ -31,9 +31,9 @@ PYBIND11_MODULE(py_rccsd, m) {
 
   py::class_<SparseTensor4d>(m, "SparseTensor4d")
       .def(py::init<std::array<size_t, 4>, double>())
-      .def(py::init<py::array_t<double, py::array::c_style>, std::array<size_t, 4>,
-                    const size_t, const std::string, const std::string,
-                    const bool>(),
+      .def(py::init<py::array_t<double, py::array::c_style>,
+                    std::array<size_t, 4>, const size_t, const std::string,
+                    const std::string, const bool>(),
            py::arg("tensor_arr").noconvert(), py::arg("dims"), py::arg("m"),
            py::arg("compression") = "fri",
            py::arg("sampling_method") = "pivotal", py::arg("verbose") = false)
@@ -49,5 +49,8 @@ PYBIND11_MODULE(py_rccsd, m) {
   // Contraction wrapper
   m.def("contract_DTSpT", &contract_SparseTensor4d_wrapper, "",
         "W"_a.noconvert(), "T"_a.noconvert(), "ouput"_a.noconvert(), "term"_a);
+  m.def("contract_DTSpT_experimental",
+        &contract_SparseTensor4d_wrapper_experimental, "", "W"_a.noconvert(),
+        "T"_a.noconvert(), "ouput"_a.noconvert(), "term"_a);
   //   m.def("init_sparse_tensor", &init_sparse_tensor, "Nothing");
 }
