@@ -18,6 +18,8 @@ default_fri_settings = {
     "sampling_method": "systematic",
     "verbose": False,
     "compressed_contractions": ["O^2V^4", "O^3V^3", "O^4V^2"],
+    "burn_in":100,
+    "unbias": False,
 }
 
 
@@ -104,14 +106,35 @@ def update_amps(
         cc.fri_settings["verbose"],
     )
     if "O^3V^3" in compressed_contractions or "O^4V^2" in compressed_contractions:
-        t2_sparse_alt = SparseTensor4d(
-            t2,
-            t2.shape,
-            int(m_keep),
-            cc.fri_settings["compression"],
-            cc.fri_settings["sampling_method"],
-            cc.fri_settings["verbose"],
-        )
+        if not cc.fri_settings["unbiased"] or cc._iter < cc.fri_settings["burn_in"]:
+            t2_sparse_alt = SparseTensor4d(
+                t2,
+                t2.shape,
+                int(m_keep),
+                cc.fri_settings["compression"],
+                cc.fri_settings["sampling_method"],
+                cc.fri_settings["verbose"],
+            )
+        else:
+            # X(t+1) = Aphi(X(t)) + B(phi(X(t)),phi(Y(t)))
+            # Y(t+1) = (1- epsilon(t)) Y(t) + epsilon(t)X(t+1)
+            # epsilon(t) = 1/t
+            it = cc._iter - cc.fri_settings["burn_in"]
+            
+            if it == 0:
+                cc._t2_avg = t2
+            else:
+                cc._t2_avg = t2/it + (it-1)/it * cc._t2_avg
+
+            t2_sparse_alt = SparseTensor4d(
+                cc._t2_avg,
+                t2.shape,
+                int(m_keep),
+                cc.fri_settings["compression"],
+                cc.fri_settings["sampling_method"],
+                cc.fri_settings["verbose"],
+            )
+
     t_compress = time.perf_counter() - t_compress
 
     #
