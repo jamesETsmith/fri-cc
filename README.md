@@ -25,6 +25,7 @@
 
 ### From Source
 ```bash
+git clone git@github.com:jamesETsmith/fri-cc.git --recursive
 CXX=<your desired c++ compiler> cmake -B build
 cmake --build build --parallel --target install
 python -m pip install -e .
@@ -32,12 +33,15 @@ python -m pip install -e .
 
 For `cmake<3.14`
 ```bash
+git clone git@github.com:jamesETsmith/fri-cc.git --recursive
 mkdir build && cd build
 CXX=<your desired c++ compiler> cmake ..
 make install -j
 cd ..
 python -m pip install -e .
 ```
+
+> :warning: NOTE: `fri-cc` uses `git submodules`
 
 Broadly speaking, the build/install process has the following steps:
 
