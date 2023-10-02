@@ -13,12 +13,14 @@
 - Python >= 3.6
     - PySCF
     - pytest
+    - matplotlib
+    - h5py
 
 ### Tested Configurations
 
-| Compiler  |      Success       |
-| :-------: | :----------------: |
-|   g++10   | :heavy_check_mark: |
+| Compiler |      Success       |
+| :------: | :----------------: |
+|  g++10   | :heavy_check_mark: |
 
 
 ### From Source
